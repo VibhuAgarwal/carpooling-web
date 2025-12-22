@@ -9,6 +9,7 @@ export function initSocket(server: any) {
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth.token;
+      console.log(token);
       jwt.verify(token, process.env.NEXTAUTH_SECRET!);
       next();
     } catch {
