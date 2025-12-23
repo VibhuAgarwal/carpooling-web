@@ -98,6 +98,8 @@ export default function LoginPage() {
                   src="https://www.svgrepo.com/show/475656/google-color.svg"
                   alt="Google"
                   className="w-5 h-5"
+                  width={45}
+                  height={45}
                 />
                 Continue with Google
               </>
