@@ -7,48 +7,84 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  RIDER
+enum RideStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum BookingStatus {
   PENDING
   ACCEPTED
   REJECTED
+  CANCELLED
+}
+
+enum NotificationType {
+  BOOKING_ACCEPTED
+  BOOKING_REJECTED
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  image     String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
+  id    String  @id @default(uuid())
+  name  String?
+  email String? @unique
+  image String?
 
-  rides    Ride[]
-  bookings Booking[]
+  rides         Ride[]         @relation("UserRides")
+  bookings      Booking[]
+  notifications Notification[] 
+
+  createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Ride {
-  id        String   @id @default(uuid())
-  riderId  String
-  rider    User     @relation(fields: [riderId], references: [id])
-  from     String
-  to       String
-  seats    Int
-  createdAt DateTime @default(now())
+  id String @id @default(uuid())
+
+  driverId String
+  driver   User   @relation("UserRides", fields: [driverId], references: [id])
+
+  from        String
+  to          String
+  routePoints Json?
+
+  seatsTotal Int
+  seatsLeft  Int
+
+  startTime DateTime
+  status    RideStatus @default(ACTIVE)
 
   bookings Booking[]
+
+  createdAt DateTime @default(now())
 }
 
 model Booking {
-  id        String        @id @default(uuid())
-  rideId   String
-  userId   String
-  seats    Int
-  status   BookingStatus @default(PENDING)
+  id String @id @default(uuid())
+
+  rideId String
+  userId String
 
   ride Ride @relation(fields: [rideId], references: [id])
   user User @relation(fields: [userId], references: [id])
+
+  seats  Int
+  status BookingStatus @default(PENDING)
+  reason String?
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  type    NotificationType
+  message String
+  isRead  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
 }

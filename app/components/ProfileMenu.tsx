@@ -26,6 +26,21 @@ export default function ProfileMenu() {
       ? "/dashboard/rider"
       : "/dashboard/user";
 
+      const getAvatarUrl = () => {
+  if (session?.user?.image) return session.user.image;
+
+  const seed =
+    session?.user?.id ||
+    session?.user?.email ||
+    session?.user?.name ||
+    "default";
+
+  return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
+    seed
+  )}`;
+};
+
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -33,7 +48,7 @@ export default function ProfileMenu() {
         className="flex items-center gap-2 rounded-full border px-3 py-1.5 hover:bg-gray-50"
       >
         <img
-          src={session.user.image || "/avatar.png"}
+          src={getAvatarUrl()}
           alt="avatar"
           className="w-8 h-8 rounded-full"
         />

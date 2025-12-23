@@ -1,7 +1,6 @@
 import GoogleProvider from "next-auth/providers/google";
 import { AuthOptions } from "next-auth";
 import { prisma } from "./prisma";
-import { cookies } from "next/headers";
 
 export const authOptions: AuthOptions = {
   session: {
@@ -16,38 +15,23 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user, account, trigger }) {
+    async jwt({ token, user }) {
       if (user?.email) {
-        // Read role from cookie / first-login context
-        const roleFromUI =
-          token.role || (token).roleFromUI;
-
-        const existingUser = await prisma.user.findUnique({
+        let dbUser = await prisma.user.findUnique({
           where: { email: user.email },
         });
 
-        let dbUser;
-
-        if (!existingUser) {
-          // FIRST LOGIN → persist role
-          const role =
-            roleFromUI === "RIDER" ? "RIDER" : "USER";
-
+        if (!dbUser) {
           dbUser = await prisma.user.create({
             data: {
               email: user.email,
               name: user.name || "User",
               image: user.image,
-              role,
             },
           });
-        } else {
-          // EXISTING USER → NEVER change role
-          dbUser = existingUser;
         }
 
         token.userId = dbUser.id;
-        token.role = dbUser.role;
       }
 
       return token;
@@ -56,7 +40,6 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.userId as string;
-        session.user.role = token.role;
       }
       return session;
     },
