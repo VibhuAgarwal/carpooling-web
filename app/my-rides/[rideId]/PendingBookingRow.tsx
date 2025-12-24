@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -7,20 +8,37 @@ export default function PendingBookingRow({ booking }: any) {
   const [loading, setLoading] = useState(false);
 
   const act = async (action: "ACCEPT" | "REJECT") => {
+    if (action === "REJECT" && !reason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+
     setLoading(true);
 
-    await fetch("/api/bookings/action", {
+    const res = await fetch("/api/bookings/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         bookingId: booking.id,
         action,
-        reason,
+        reason: reason.trim(),
       }),
     });
 
-    // simplest & reliable for now
-    window.location.reload();
+    setLoading(false);
+
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const data = text ? JSON.parse(text) : null;
+        alert(data?.error || "Action failed");
+      } catch {
+        alert("Action failed");
+      }
+      return; // ❗ DO NOT reload
+    }
+
+    window.location.reload(); // only on success
   };
 
   return (
@@ -57,9 +75,9 @@ export default function PendingBookingRow({ booking }: any) {
         />
 
         <button
-          disabled={loading}
+          disabled={loading || !reason.trim()}
           onClick={() => act("REJECT")}
-          className="bg-red-600 text-white px-3 py-1 rounded text-sm"
+          className="bg-red-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm"
         >
           Reject
         </button>

@@ -1,53 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
-  try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-
-    if (!token?.userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
-    const { from, to, seatsTotal, startTime } = body;
-
-    if (!from || !to || !seatsTotal || !startTime) {
-      return NextResponse.json(
-        { error: "Missing fields" },
-        { status: 400 }
-      );
-    }
-
-    const ride = await prisma.ride.create({
-  data: {
-    from,
-    to,
-    seatsTotal: Number(seatsTotal),
-    seatsLeft: Number(seatsTotal),
-    startTime: new Date(startTime),
-    driverId: token.userId,
-    status: "ACTIVE", 
-  },
-});
-
-    return NextResponse.json(ride, { status: 201 });
-  } catch (err) {
-    console.error("CREATE RIDE ERROR:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
+/**
+ * GET /api/rides
+ * Fetch recent active rides (homepage)
+ */
 export async function GET() {
   try {
     const rides = await prisma.ride.findMany({
@@ -64,8 +22,80 @@ export async function GET() {
     return NextResponse.json(rides);
   } catch (err) {
     console.error("FETCH RIDES ERROR:", err);
-    return NextResponse.json([]);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
+/**
+ * POST /api/rides
+ * Create a new ride
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
+    if (!token?.userId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const {
+      from,
+      fromLat,
+      fromLng,
+      to,
+      toLat,
+      toLng,
+      seatsTotal,
+      startTime,
+    } = await req.json();
+
+    if (
+      !from ||
+      !to ||
+      !fromLat ||
+      !fromLng ||
+      !toLat ||
+      !toLng ||
+      !seatsTotal ||
+      !startTime
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const ride = await prisma.ride.create({
+      data: {
+        driverId: token.userId,
+        from,
+        fromLat,
+        fromLng,
+        to,
+        toLat,
+        toLng,
+        seatsTotal: Number(seatsTotal),
+        seatsLeft: Number(seatsTotal),
+        startTime: new Date(startTime),
+        status: "ACTIVE",
+      },
+    });
+
+    return NextResponse.json(ride);
+  } catch (err) {
+    console.error("CREATE RIDE ERROR:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
