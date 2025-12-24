@@ -21,6 +21,8 @@ enum BookingStatus {
 }
 
 enum NotificationType {
+  BOOKING_SENT
+  BOOKING_RECEIVED
   BOOKING_ACCEPTED
   BOOKING_REJECTED
 }
@@ -40,14 +42,15 @@ model User {
 }
 
 model Ride {
-  id String @id @default(uuid())
+  id        String   @id @default(uuid())
 
-  driverId String
-  driver   User   @relation("UserRides", fields: [driverId], references: [id])
+  from      String
+  fromLat   Float?   // 👈 nullable
+  fromLng   Float?
 
-  from        String
-  to          String
-  routePoints Json?
+  to        String
+  toLat     Float?
+  toLng     Float?
 
   seatsTotal Int
   seatsLeft  Int
@@ -55,10 +58,14 @@ model Ride {
   startTime DateTime
   status    RideStatus @default(ACTIVE)
 
-  bookings Booking[]
+  driverId  String
+  driver    User @relation("UserRides", fields: [driverId], references: [id])
 
+  bookings  Booking[]
   createdAt DateTime @default(now())
 }
+
+
 
 model Booking {
   id String @id @default(uuid())
@@ -77,14 +84,13 @@ model Booking {
 }
 
 model Notification {
-  id String @id @default(uuid())
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  type      NotificationType  
+  message   String
+  isRead    Boolean           @default(false)
 
-  type    NotificationType
-  message String
-  isRead  Boolean          @default(false)
-
-  createdAt DateTime @default(now())
+  createdAt DateTime          @default(now())
 }
