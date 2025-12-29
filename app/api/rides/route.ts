@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getRoutePolyline } from "@/lib/googleMaps";
 
 /**
  * GET /api/rides
@@ -41,35 +42,62 @@ export async function POST(req: NextRequest) {
     });
 
     if (!token?.userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const {
-      from,
-      fromLat,
-      fromLng,
-      to,
-      toLat,
-      toLng,
-      seatsTotal,
-      startTime,
-    } = await req.json();
+    const body = await req.json();
 
+    const from = body.from;
+    const to = body.to;
+
+    const fromLat = Number(body.fromLat);
+    const fromLng = Number(body.fromLng);
+    const toLat = Number(body.toLat);
+    const toLng = Number(body.toLng);
+
+    const seatsTotal = Number(body.seatsTotal);
+    const startTime = body.startTime;
+
+    // 🔴 HARD VALIDATION
     if (
       !from ||
       !to ||
-      !fromLat ||
-      !fromLng ||
-      !toLat ||
-      !toLng ||
-      !seatsTotal ||
+      [fromLat, fromLng, toLat, toLng].some(
+        (v) => Number.isNaN(v)
+      ) ||
+      Number.isNaN(seatsTotal) ||
       !startTime
     ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid or missing fields" },
+        { status: 400 }
+      );
+    }
+
+    console.log("COORD TYPES:", {
+      fromLat,
+      fromLng,
+      toLat,
+      toLng,
+      types: [
+        typeof fromLat,
+        typeof fromLng,
+        typeof toLat,
+        typeof toLng,
+      ],
+    });
+
+    // ✅ ALWAYS calculate route
+    const polyline = await getRoutePolyline(
+      fromLat,
+      fromLng,
+      toLat,
+      toLng
+    );
+
+    if (!polyline) {
+      return NextResponse.json(
+        { error: "Route could not be calculated" },
         { status: 400 }
       );
     }
@@ -78,19 +106,20 @@ export async function POST(req: NextRequest) {
       data: {
         driverId: token.userId,
         from,
-        fromLat,
-        fromLng,
+        fromLat: Number(fromLat),
+        fromLng: Number(fromLng),
         to,
-        toLat,
-        toLng,
+        toLat: Number(toLat),
+        toLng: Number(toLng),
+        routePolyline: polyline,
         seatsTotal: Number(seatsTotal),
-        seatsLeft: Number(seatsTotal),
+        seatsLeft: seatsTotal,
         startTime: new Date(startTime),
         status: "ACTIVE",
       },
     });
 
-    return NextResponse.json(ride);
+    return NextResponse.json(ride, { status: 201 });
   } catch (err) {
     console.error("CREATE RIDE ERROR:", err);
     return NextResponse.json(

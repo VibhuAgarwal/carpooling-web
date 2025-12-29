@@ -1,58 +1,86 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import polyline from "@mapbox/polyline";
+
+// simple haversine distance (km)
+function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+
+  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
 
 export async function POST(req: Request) {
-  const { from, to, date } = await req.json();
+  const { from, to } = await req.json();
 
   if (!from || !to) {
     return NextResponse.json([], { status: 400 });
   }
 
-  const RADIUS = 0.3; // ~30km
-
-const rides = await prisma.ride.findMany({
-  where: {
-    status: "ACTIVE",
-
-    // ✅ START location match
-    fromLat: {
-      not: null,
-      gte: from.lat - RADIUS,
-      lte: from.lat + RADIUS,
+  // 1️⃣ Fetch candidate rides (broad filter only)
+  const rides = await prisma.ride.findMany({
+    where: {
+      status: "ACTIVE",
+      routePolyline: { not: null },
     },
-    fromLng: {
-      not: null,
-      gte: from.lng - RADIUS,
-      lte: from.lng + RADIUS,
+    include: {
+      driver: {
+        select: { name: true, image: true },
+      },
     },
+    take: 50, // keep reasonable
+  });
 
-    // ✅ DESTINATION match (THIS WAS MISSING)
-    toLat: {
-      not: null,
-      gte: to.lat - RADIUS,
-      lte: to.lat + RADIUS,
-    },
-    toLng: {
-      not: null,
-      gte: to.lng - RADIUS,
-      lte: to.lng + RADIUS,
-    },
+  const PICKUP_RADIUS_KM = 25; // Gurgaon-scale
+  const DROP_RADIUS_KM = 30;
 
-    startTime: date
-      ? {
-          gte: new Date(date),
-          lt: new Date(new Date(date).setHours(23, 59, 59)),
-        }
-      : undefined,
-  },
-  include: {
-    driver: {
-      select: { name: true, image: true },
-    },
-  },
-  take: 20,
-});
+  const matched = rides.filter((ride) => {
+    if (!ride.routePolyline) return false;
 
+    // 2️⃣ Decode route
+    const routePoints = polyline
+      .decode(ride.routePolyline)
+      .map(([lat, lng]) => ({ lat, lng }));
 
-  return NextResponse.json(rides);
+    let pickupIndex = -1;
+    let dropIndex = -1;
+
+    // 3️⃣ Find pickup & drop positions on route
+    for (let i = 0; i < routePoints.length; i++) {
+      const p = routePoints[i];
+
+      if (
+        pickupIndex === -1 &&
+        distanceKm(p, { lat: from.lat, lng: from.lng }) <= PICKUP_RADIUS_KM
+      ) {
+        pickupIndex = i;
+      }
+
+      if (
+        pickupIndex !== -1 &&
+        distanceKm(p, { lat: to.lat, lng: to.lng }) <= DROP_RADIUS_KM
+      ) {
+        dropIndex = i;
+        break;
+      }
+    }
+
+    // 4️⃣ Valid match only if pickup happens before drop
+    if (pickupIndex === -1 || dropIndex === -1) return false;
+    if (pickupIndex >= dropIndex) return false;
+
+    return true;
+  });
+
+  return NextResponse.json(matched);
 }

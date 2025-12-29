@@ -36,7 +36,8 @@ export default function PlaceInput({
   return (
     <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged}>
       <input
-        className="border p-2 w-full rounded"
+        type="text"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
         placeholder={placeholder}
       />
     </Autocomplete>
