@@ -33,24 +33,38 @@ model User {
   email String? @unique
   image String?
 
+  phone                 String?
+  gender                String?
+  dateOfBirth           DateTime?
+  address               String?
+  aadhaarNumber         String?
+  panNumber             String?
+  drivingLicenseNumber  String?
+  aadhaarFile           String?
+  panFile               String?
+  drivingLicenseFile    String?
+
   rides         Ride[]         @relation("UserRides")
   bookings      Booking[]
-  notifications Notification[] 
+  notifications Notification[]
 
   createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model Ride {
   id        String   @id @default(uuid())
 
   from      String
-  fromLat   Float?   // 👈 nullable
+  fromLat   Float?
   fromLng   Float?
 
   to        String
   toLat     Float?
   toLng     Float?
+
+  /// ✅ Google Directions encoded polyline
+  routePolyline String?
 
   seatsTotal Int
   seatsLeft  Int
@@ -62,10 +76,14 @@ model Ride {
   driver    User @relation("UserRides", fields: [driverId], references: [id])
 
   bookings  Booking[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fromLat, fromLng])
+  @@index([toLat, toLng])
+  @@index([startTime])
 }
-
-
 
 model Booking {
   id String @id @default(uuid())
@@ -78,9 +96,14 @@ model Booking {
 
   seats  Int
   status BookingStatus @default(PENDING)
+
+  /// ✅ Consistent naming (used by reject flow)
   reason String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rideId, userId])
 }
 
 model Notification {
@@ -88,9 +111,12 @@ model Notification {
   userId    String
   user      User              @relation(fields: [userId], references: [id])
 
-  type      NotificationType  
+  type      NotificationType
   message   String
   isRead    Boolean           @default(false)
 
   createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([userId, isRead])
 }

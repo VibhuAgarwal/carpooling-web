@@ -1,6 +1,8 @@
 import "./globals.css";
 import Providers from "./providers";
 import Navbar from "./components/Navbar";
+import GoogleMapsProvider from "@/app/providers/GoogleMapsProvider";
+
 export default function RootLayout({
   children,
 }: {
@@ -10,10 +12,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          <Navbar />
-          <main className="max-w-7xl mx-auto px-6 py-6">
-            {children}
-          </main>
+          <GoogleMapsProvider>
+            <Navbar />
+            <main className="max-w-7xl mx-auto px-6 py-6">
+              {children}
+            </main>
+          </GoogleMapsProvider>
         </Providers>
       </body>
     </html>

@@ -32,6 +32,7 @@ export const authOptions: AuthOptions = {
         }
 
         token.userId = dbUser.id;
+        token.email = user.email;
       }
 
       return token;
@@ -42,6 +43,14 @@ export const authOptions: AuthOptions = {
         session.user.id = token.userId as string;
       }
       return session;
+    },
+
+    async redirect({ url, baseUrl }) {
+      // After sign-in, redirect to profile completion check
+      if (url === baseUrl || url.includes("callbackUrl=")) {
+        return `${baseUrl}/auth/complete-profile`;
+      }
+      return url.startsWith(baseUrl) ? url : baseUrl;
     },
   },
 };

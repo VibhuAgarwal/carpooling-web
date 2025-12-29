@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getIO } from "@/lib/socket";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get DB user (driver)
+    // 👤 Driver
     const driver = await prisma.user.findUnique({
       where: { email: token.email },
     });
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load booking with ride
+    // 📦 Booking
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: { ride: true },
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔐 Authorization: only ride owner can act
+    // 🔐 Authorization
     if (booking.ride.driverId !== driver.id) {
       return NextResponse.json(
         { error: "Not allowed" },
@@ -55,12 +56,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Reject requires reason
+    // 🔴 Reject requires reason
     if (action === "REJECT" && !reason) {
       return NextResponse.json(
         { error: "Rejection reason required" },
         { status: 400 }
       );
+    }
+
+    // ⚠️ Socket is OPTIONAL — never crash API
+    let io;
+    try {
+      io = getIO();
+    } catch {
+      io = null;
     }
 
     // ✅ ACCEPT
@@ -87,13 +96,18 @@ export async function POST(req: NextRequest) {
         }),
       ]);
 
-      // 🔔 USER notification (ACCEPTED)
+      // 🔔 Notification (DB)
       await prisma.notification.create({
         data: {
           userId: booking.userId,
           type: "BOOKING_ACCEPTED",
-          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was accepted`,
+          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was accepted by ${driver.name}`,
         },
+      });
+
+      // 🔴 Socket (best-effort)
+      io?.to(`user:${booking.userId}`).emit("booking:accepted", {
+        rideId: booking.rideId,
       });
     }
 
@@ -103,17 +117,21 @@ export async function POST(req: NextRequest) {
         where: { id: bookingId },
         data: {
           status: "REJECTED",
-          reason: reason,
+          reason,
         },
       });
 
-      // 🔔 USER notification (REJECTED)
       await prisma.notification.create({
         data: {
           userId: booking.userId,
           type: "BOOKING_REJECTED",
-          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was rejected. Reason: ${reason}`,
+          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was rejected by ${driver.name}. Reason: ${reason}`,
         },
+      });
+
+      io?.to(`user:${booking.userId}`).emit("booking:rejected", {
+        rideId: booking.rideId,
+        reason,
       });
     }
 

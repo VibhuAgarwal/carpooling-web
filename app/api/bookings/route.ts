@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getIO } from "@/lib/socket";
 
 /**
  * POST /api/bookings
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Resolve DB user
+    // 👤 Resolve DB user
     const user = await prisma.user.findUnique({
       where: { email: token.email },
     });
@@ -85,22 +86,36 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 🔔 USER notification
-    await prisma.notification.create({
-  data: {
-    userId: user.id,
-    type: "BOOKING_SENT",
-    message: `Booking request sent for ${ride.from} → ${ride.to}`,
-  },
-});
+    // 🔔 Notifications (DB = source of truth)
+    await prisma.notification.createMany({
+      data: [
+        {
+          userId: user.id,
+          type: "BOOKING_SENT",
+          message: `Booking request sent for ${ride.from} → ${ride.to} to driver`,
+        },
+        {
+          userId: ride.driverId,
+          type: "BOOKING_RECEIVED",
+          message: `New booking request received for ${ride.from} → ${ride.to} from ${user.name}`,
+        },
+      ],
+    });
 
-await prisma.notification.create({
-  data: {
-    userId: ride.driverId,
-    type: "BOOKING_RECEIVED",
-    message: `New booking request from ${user.name} for ${ride.from} → ${ride.to}`,
-  },
-});
+    // 🔴 Socket (BEST-EFFORT, NEVER FAIL API)
+    let io;
+    try {
+      io = getIO();
+    } catch {
+      io = null;
+    }
+
+    io?.to(`user:${ride.driverId}`).emit("booking:new", {
+      bookingId: booking.id,
+      rideId: ride.id,
+      from: ride.from,
+      to: ride.to,
+    });
 
     return NextResponse.json(booking, { status: 201 });
   } catch (err) {
