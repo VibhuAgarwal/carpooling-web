@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import PendingBookingRow from "./PendingBookingRow";
 import RouteMap from "@/app/components/RouteMap";
+import { ToastViewport } from "@/app/components/Toast";
 
 export default async function RideDetailsPage({
   params,
@@ -55,6 +56,7 @@ export default async function RideDetailsPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <ToastViewport />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">

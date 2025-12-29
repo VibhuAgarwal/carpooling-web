@@ -3,7 +3,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PlaceInput from "./components/PlaceInput";
+import { ToastViewport, toast } from "./components/Toast";
 
 type Ride = {
   id: string;
@@ -11,6 +13,7 @@ type Ride = {
   to: string;
   seatsLeft: number;
   startTime: string;
+  seatsTotal: number;
   driver: {
     name: string;
     image?: string | null;
@@ -23,6 +26,7 @@ export default function HomePage() {
   const [to, setTo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"recent" | "search">("recent");
+  const router = useRouter();
 
   // Helper to filter expired rides and optionally limit
   const processRides = (rides: Ride[], limit?: number) => {
@@ -40,22 +44,27 @@ export default function HomePage() {
 
   const searchRides = async () => {
     if (!from || !to) {
-      alert("Please select both locations");
+      toast.info("Pick both From and To to search rides.");
       return;
     }
 
     setLoading(true);
     setActiveTab("search");
 
-    const res = await fetch("/api/rides/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to }),
-    });
+    try {
+      const res = await fetch("/api/rides/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to }),
+      });
 
-    const data = await res.json();
-    setRides(processRides(Array.isArray(data) ? data : []));
-    setLoading(false);
+      const data = await res.json();
+      setRides(processRides(Array.isArray(data) ? data : []));
+    } catch {
+      toast.error("Search failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -64,8 +73,13 @@ export default function HomePage() {
     }
   };
 
+  const openRide = (rideId: string) => {
+    router.push(`/ride/${rideId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <ToastViewport />
       {/* Header Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white">
         <div className="absolute inset-0 opacity-10">
@@ -203,41 +217,51 @@ export default function HomePage() {
               {rides.map((ride, index) => (
                 <div
                   key={ride.id}
-                  className="group bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-1"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ride details from ${ride.from} to ${ride.to}`}
+                  onClick={() => openRide(ride.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openRide(ride.id);
+                    }
+                  }}
+                  className="group bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-1 flex flex-col h-full cursor-pointer"
                   style={{
                     animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
                   }}
                 >
                   {/* Card Header */}
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 text-white">
+                    <div className="bg-indigo-600 p-4 text-white">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <p className="text-sm font-medium opacity-90 mb-1">Route</p>
-                        <p className="text-lg sm:text-xl font-bold">{ride.from}</p>
-                        <div className="flex items-center gap-2 my-2 opacity-75">
-                          <div className="w-1 h-1 rounded-full bg-white"></div>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                          </svg>
-                          <div className="w-1 h-1 rounded-full bg-white"></div>
-                        </div>
-                        <p className="text-lg sm:text-xl font-bold">{ride.to}</p>
+                      <p className="text-sm font-medium opacity-90 mb-1">Route</p>
+                      <p className="text-lg sm:text-xl font-bold">{ride.from.slice(0, 20)}</p>
+                      <div className="flex items-center gap-2 my-2 opacity-75">
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                        <div className="w-1 h-1 rounded-full bg-white"></div>
+                      </div>
+                      <p className="text-lg sm:text-xl font-bold">{ride.to}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-3xl font-bold">{ride.seatsLeft}</p>
-                        <p className="text-xs opacity-90">Seats</p>
+                      <p className="text-3xl font-bold">{ride.seatsLeft}</p>
+                      <p className="text-xs opacity-90">Seats</p>
                       </div>
                     </div>
-                  </div>
+                    </div>
 
                   {/* Card Body */}
-                  <div className="p-4 space-y-4">
+                  <div className="p-4 space-y-4 flex-1">
                     {/* Driver Info */}
                     <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                       <img
                         src={ride.driver.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(ride.driver.name)}&background=random`}
                         alt={ride.driver.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-blue-200"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-blue-200 flex-shrink-0"
                       />
                       <div>
                         <p className="font-semibold text-gray-900">{ride.driver.name}</p>
@@ -271,7 +295,7 @@ export default function HomePage() {
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                         <div
                           className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(ride.seatsLeft / 5) * 100}%` }}
+                          style={{ width: `${(ride.seatsLeft / ride.seatsTotal) * 100}%` }}
                         ></div>
                       </div>
                       <p className="text-xs font-medium text-gray-700">
@@ -285,7 +309,9 @@ export default function HomePage() {
                   {/* Book Button */}
                   <div className="px-4 pb-4">
                     <button
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
+
                         const res = await fetch("/api/bookings", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -296,14 +322,14 @@ export default function HomePage() {
                         });
 
                         if (res.ok) {
-                          alert("✓ Booking request sent!");
+                          toast.success("Request sent to the driver.", "Booking requested");
                         } else {
                           const text = await res.text();
                           try {
                             const data = text ? JSON.parse(text) : null;
-                            alert(data?.error || "Booking failed");
+                            toast.error(data?.error || "Booking failed");
                           } catch {
-                            alert("Booking failed");
+                            toast.error("Booking failed");
                           }
                         }
                       }}

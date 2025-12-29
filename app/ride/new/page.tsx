@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PlaceInput from "../../components/PlaceInput";
 import Link from "next/link";
+import { ToastViewport, toast } from "../../components/Toast";
 
 export default function PostRidePage() {
   const router = useRouter();
@@ -17,42 +18,46 @@ export default function PostRidePage() {
     e.preventDefault();
 
     if (!from || !to) {
-      alert("Please select valid locations");
+      toast.info("Select valid From and To locations before posting.");
       return;
     }
 
     setLoading(true);
     const formData = new FormData(e.currentTarget);
 
-    const res = await fetch("/api/rides", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: from.name,
-        fromLat: from.lat,
-        fromLng: from.lng,
+    try {
+      const res = await fetch("/api/rides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: from.name,
+          fromLat: from.lat,
+          fromLng: from.lng,
+          to: to.name,
+          toLat: to.lat,
+          toLng: to.lng,
+          seatsTotal: Number(formData.get("seats")),
+          startTime: formData.get("startTime"),
+        }),
+      });
 
-        to: to.name,
-        toLat: to.lat,
-        toLng: to.lng,
-
-        seatsTotal: Number(formData.get("seats")),
-        startTime: formData.get("startTime"),
-      }),
-    });
-
-    if (res.ok) {
-      router.push("/");
-    } else {
-      const data = await res.json();
-      alert(data.error || "Failed to post ride");
+      if (res.ok) {
+        toast.success("Your ride is live.", "Ride posted");
+        router.push("/");
+      } else {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "Failed to post ride");
+      }
+    } catch {
+      toast.error("Failed to post ride. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <ToastViewport />
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
