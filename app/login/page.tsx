@@ -52,38 +52,6 @@ export default function LoginPage() {
             Sign in to continue
           </p>
 
-          {/* Role selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Continue as
-            </label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setRole("USER")}
-                className={`flex-1 py-2 rounded-md border text-sm font-medium ${
-                  role === "USER"
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300"
-                }`}
-              >
-                Passenger
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRole("RIDER")}
-                className={`flex-1 py-2 rounded-md border text-sm font-medium ${
-                  role === "RIDER"
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300"
-                }`}
-              >
-                Driver
-              </button>
-            </div>
-          </div>
-
           {/* Google button */}
           <button
             onClick={handleGoogleLogin}

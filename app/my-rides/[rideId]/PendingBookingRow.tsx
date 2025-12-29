@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/app/components/Toast";
 
 export default function PendingBookingRow({ booking }: any) {
   const [reason, setReason] = useState("");
@@ -10,7 +11,7 @@ export default function PendingBookingRow({ booking }: any) {
 
   const act = async (action: "ACCEPT" | "REJECT") => {
     if (action === "REJECT" && !reason.trim()) {
-      alert("Please provide a rejection reason");
+      toast.warning("Add a short reason to reject this request.");
       return;
     }
 
@@ -32,12 +33,17 @@ export default function PendingBookingRow({ booking }: any) {
       const text = await res.text();
       try {
         const data = text ? JSON.parse(text) : null;
-        alert(data?.error || "Action failed");
+        toast.error(data?.error || "Action failed");
       } catch {
-        alert("Action failed");
+        toast.error("Action failed");
       }
       return;
     }
+
+    toast.success(
+      action === "ACCEPT" ? "Passenger accepted." : "Request rejected.",
+      "Updated"
+    );
 
     window.location.reload();
   };

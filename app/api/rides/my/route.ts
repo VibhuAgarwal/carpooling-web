@@ -14,15 +14,17 @@ export async function GET(req: NextRequest) {
     }
 
     const rides = await prisma.ride.findMany({
-  where: { driverId: token.userId },
-  select: {
-    id: true,        // 🔴 REQUIRED
-    from: true,
-    to: true,
-    startTime: true,
-    status: true,
-  },
-});
+      where: { driverId: token.userId },
+      select: {
+        id: true,        
+        from: true,
+        to: true,
+        startTime: true,
+        status: true,
+        seatsLeft: true,
+        seatsTotal: true,
+      },
+    });
 
     return NextResponse.json(rides);
   } catch (err) {

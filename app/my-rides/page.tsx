@@ -17,13 +17,40 @@ export default function MyRidesPage() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Normalize potentially-string/undefined numeric fields coming from API
+  const toNumber = (v: unknown, fallback = 0) => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
   useEffect(() => {
     const fetchRides = async () => {
       try {
         const res = await fetch("/api/rides/my");
         const data = await res.json();
         if (Array.isArray(data)) {
-          setRides(data);
+          const normalized: Ride[] = data.map((r: any) => {
+            const seatsTotalRaw = toNumber(r?.seatsTotal, 0);
+            const seatsLeftRaw = toNumber(r?.seatsLeft, 0);
+
+            // If API sends inconsistent values, make UI resilient
+            const seatsTotal = Math.max(0, seatsTotalRaw);
+            const seatsLeft = clamp(seatsLeftRaw, 0, seatsTotal || Math.max(0, seatsLeftRaw));
+
+            return {
+              id: String(r?.id ?? ""),
+              from: String(r?.from ?? ""),
+              to: String(r?.to ?? ""),
+              startTime: String(r?.startTime ?? ""),
+              status: (r?.status ?? "ACTIVE") as Ride["status"],
+              seatsLeft,
+              seatsTotal: seatsTotal || (seatsLeftRaw > 0 ? seatsLeftRaw : 0),
+            };
+          });
+
+          setRides(normalized.filter((r) => r.id));
         }
       } catch (err) {
         console.error("Failed to fetch rides:", err);
@@ -45,80 +72,88 @@ export default function MyRidesPage() {
     (r) => new Date(r.startTime) < now || r.status !== "ACTIVE"
   );
 
-  const RideCard = ({ ride }: { ride: Ride }) => (
-    <Link
-      href={`/my-rides/${ride.id}`}
-      className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1 block"
-    >
-      <div className="p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-              {ride.from}
-            </p>
-            <div className="flex items-center gap-2 my-2 text-gray-400">
-              <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-              <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+  const RideCard = ({ ride }: { ride: Ride }) => {
+    const seatsTotalSafe = Math.max(0, toNumber(ride.seatsTotal, 0));
+    const seatsLeftSafe = clamp(toNumber(ride.seatsLeft, 0), 0, seatsTotalSafe || Math.max(0, toNumber(ride.seatsLeft, 0)));
+    const percentRemaining =
+      seatsTotalSafe > 0 ? clamp((seatsLeftSafe / seatsTotalSafe) * 100, 0, 100) : 0;
+
+    return (
+      <Link
+        href={`/my-rides/${ride.id}`}
+        className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden hover:-translate-y-1 block"
+      >
+        <div className="p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                {ride.from}
+              </p>
+              <div className="flex items-center gap-2 my-2 text-gray-400">
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+              </div>
+              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                {ride.to}
+              </p>
             </div>
-            <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-              {ride.to}
+            
+            <div className="text-right">
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{seatsLeftSafe}</p>
+              <p className="text-xs text-gray-500">Seats Left</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
+            <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="font-medium text-gray-900">
+                {new Date(ride.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <p className="text-xs text-gray-500">
+                {new Date(ride.startTime).toLocaleDateString([], { month: "short", day: "numeric" })}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-2.5 flex items-center justify-between">
+            <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full"
+                style={{ width: `${percentRemaining}%` }}
+                aria-label={`Seats remaining: ${seatsLeftSafe} of ${seatsTotalSafe || "N/A"}`}
+              />
+            </div>
+            <p className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+              {seatsLeftSafe}/{seatsTotalSafe}
             </p>
           </div>
-          
-          <div className="text-right">
-            <p className="text-2xl sm:text-3xl font-bold text-blue-600">{ride.seatsLeft}</p>
-            <p className="text-xs text-gray-500">Seats Left</p>
+
+          <div className="mt-3 flex items-center justify-between">
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                ride.status === "ACTIVE"
+                  ? "bg-green-100 text-green-800"
+                  : ride.status === "COMPLETED"
+                  ? "bg-gray-100 text-gray-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {ride.status}
+            </span>
+            <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
         </div>
-
-        <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
-          <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="font-medium text-gray-900">
-              {new Date(ride.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </p>
-            <p className="text-xs text-gray-500">
-              {new Date(ride.startTime).toLocaleDateString([], { month: "short", day: "numeric" })}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 rounded-lg p-2.5 flex items-center justify-between">
-          <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full"
-              style={{ width: `${(ride.seatsLeft / ride.seatsTotal) * 100}%` }}
-            ></div>
-          </div>
-          <p className="text-xs font-semibold text-gray-700 whitespace-nowrap">
-            {ride.seatsLeft}/{ride.seatsTotal}
-          </p>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between">
-          <span
-            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-              ride.status === "ACTIVE"
-                ? "bg-green-100 text-green-800"
-                : ride.status === "COMPLETED"
-                ? "bg-gray-100 text-gray-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {ride.status}
-          </span>
-          <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
-    </Link>
-  );
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
