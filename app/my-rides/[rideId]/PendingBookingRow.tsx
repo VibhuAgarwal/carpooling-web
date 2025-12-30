@@ -65,6 +65,9 @@ export default function PendingBookingRow({ booking }: any) {
           <div className="flex-1">
             <p className="font-semibold text-gray-900">{booking.user.name}</p>
             <p className="text-sm text-gray-600">{booking.user.email}</p>
+            <p className="text-sm text-gray-600">
+              Phone: {booking.user.phone || "—"}
+            </p>
             <p className="text-xs text-gray-500 mt-1">
               Requesting {booking.seats}{" "}
               {booking.seats === 1 ? "seat" : "seats"}

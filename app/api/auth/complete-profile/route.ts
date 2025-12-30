@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const panFile = formData.get("panFile") as File | null;
     const drivingLicenseFile = formData.get("drivingLicenseFile") as File | null;
 
-    // Log received data for debugging
+    // Log received data for debugging (RESTORED)
     console.log("Received form data:", {
       phone,
       gender,
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       drivingLicenseFileUrl = `dl-${Date.now()}.${drivingLicenseFile.name.split(".").pop()}`;
     }
 
-    // Update user in database
+    // Update user in database (RESTORED: no select)
     const user = await prisma.user.update({
       where: { email: token.email },
       data: {
@@ -162,6 +162,7 @@ export async function POST(req: NextRequest) {
 
     console.log("Profile updated successfully for user:", user.id);
 
+    // RESTORED: return full user
     return NextResponse.json(
       { message: "Profile completed successfully", user },
       { status: 200 }

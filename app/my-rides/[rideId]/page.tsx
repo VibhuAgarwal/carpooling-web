@@ -6,6 +6,7 @@ import Link from "next/link";
 import PendingBookingRow from "./PendingBookingRow";
 import RouteMap from "@/app/components/RouteMap";
 import { ToastViewport } from "@/app/components/Toast";
+import SOSButton from "@/app/components/SOSButton";
 
 export default async function RideDetailsPage({
   params,
@@ -33,6 +34,7 @@ export default async function RideDetailsPage({
               name: true,
               email: true,
               image: true,
+              phone: true,
             },
           },
         },
@@ -59,7 +61,7 @@ export default async function RideDetailsPage({
       <ToastViewport />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 flex items-start justify-between gap-4">
           <Link
             href="/my-rides"
             className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2 mb-6"
@@ -79,6 +81,9 @@ export default async function RideDetailsPage({
             </svg>
             Back to My Rides
           </Link>
+
+          {/* NEW: SOS */}
+          <SOSButton rideId={rideId} rideFrom={ride.from} rideTo={ride.to} />
         </div>
 
         {/* Ride Summary Card */}
@@ -236,8 +241,9 @@ export default async function RideDetailsPage({
                         <p className="font-semibold text-gray-900">
                           {b.user.name}
                         </p>
+                        <p className="text-sm text-gray-600">{b.user.email}</p>
                         <p className="text-sm text-gray-600">
-                          {b.user.email}
+                          Phone: {b.user.phone || "—"}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           Seats: {b.seats}
@@ -345,6 +351,9 @@ export default async function RideDetailsPage({
                           <p className="text-sm text-gray-600">
                             Requested {b.seats}{" "}
                             {b.seats === 1 ? "seat" : "seats"}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Phone: {b.user.phone || "—"}
                           </p>
                         </div>
                       </div>
