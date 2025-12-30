@@ -4,6 +4,7 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ToastViewport, toast } from "../../components/Toast";
+import SOSButton from "@/app/components/SOSButton";
 
 type Ride = {
   id: string;
@@ -15,6 +16,7 @@ type Ride = {
   driver: {
     name: string;
     image?: string | null;
+    phone?: string | null;
   };
 };
 
@@ -93,6 +95,9 @@ export default function RideDetailsPage({
           <Link href="/" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
             ← Back to rides
           </Link>
+
+          {/* NEW: SOS */}
+          <SOSButton rideId={String(rideId)} rideFrom={ride?.from} rideTo={ride?.to} />
         </div>
 
         {loading ? (
@@ -183,6 +188,18 @@ export default function RideDetailsPage({
                   </div>
                 </div>
               </div>
+
+              {!loading && ride && (
+                <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <p className="text-sm text-gray-700">
+                    Driver phone{" "}
+                    <span className="text-gray-500">
+                      (shared after your booking is accepted)
+                    </span>
+                    : <b>{ride.driver.phone || "—"}</b>
+                  </p>
+                </div>
+              )}
 
               <button
                 onClick={requestBooking}

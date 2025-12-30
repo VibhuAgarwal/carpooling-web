@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (action !== "ACCEPT" && action !== "REJECT") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
     // 👤 Driver
     const driver = await prisma.user.findUnique({
       where: { email: token.email },
@@ -96,18 +100,23 @@ export async function POST(req: NextRequest) {
         }),
       ]);
 
-      // 🔔 Notification (DB)
+      const driverPhone = (driver as any)?.phone ? String((driver as any).phone) : null;
+
+      // 🔔 Notification (DB) — include driver phone ONLY on acceptance
       await prisma.notification.create({
         data: {
           userId: booking.userId,
           type: "BOOKING_ACCEPTED",
-          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was accepted by ${driver.name}`,
+          message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was accepted by ${driver.name}${
+            driverPhone ? `. Driver phone: ${driverPhone}` : ""
+          }`,
         },
       });
 
       // 🔴 Socket (best-effort)
       io?.to(`user:${booking.userId}`).emit("booking:accepted", {
         rideId: booking.rideId,
+        driverPhone,
       });
     }
 

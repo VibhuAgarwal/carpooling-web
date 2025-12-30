@@ -9,6 +9,7 @@ type Booking = {
   user: {
     name: string;
     email: string;
+    phone?: string | null;
   };
   ride: {
     from: string;
@@ -50,6 +51,10 @@ export default function DriverBookingsPage() {
 
     <p className="text-sm">
       Status: <b>{b.status}</b>
+    </p>
+
+    <p className="text-sm text-gray-600">
+      Phone: <b>{b.user.phone || "—"}</b>
     </p>
 
     {b.status === "PENDING" && (

@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     },
     include: {
       user: {
-        select: { name: true, email: true },
+        select: { name: true, email: true, phone: true },
       },
       ride: {
         select: { from: true, to: true },
