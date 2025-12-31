@@ -46,36 +46,42 @@ export default function Navbar() {
       return;
     }
 
+    let cancelled = false;
+
     const fetchNotifications = async () => {
       try {
         const res = await fetch("/api/notifications");
-
-        // 🔐 Not logged in OR blocked by middleware
         if (!res.ok) {
-          setUnreadCount(0);
+          if (!cancelled) setUnreadCount(0);
           return;
         }
 
-        // 🛡️ Empty body protection
         const text = await res.text();
         if (!text) {
-          setUnreadCount(0);
+          if (!cancelled) setUnreadCount(0);
           return;
         }
 
         const data = JSON.parse(text);
-
         if (Array.isArray(data)) {
           const unread = data.filter((n: Notification) => !n.isRead).length;
-          setUnreadCount(unread);
+          if (!cancelled) setUnreadCount(unread);
         }
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
-        setUnreadCount(0);
+        if (!cancelled) setUnreadCount(0);
       }
     };
 
+    const onUpdated = () => fetchNotifications(); // NEW
+
     fetchNotifications();
+    window.addEventListener("notifications:updated", onUpdated); // NEW
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("notifications:updated", onUpdated); // NEW
+    };
   }, [authChecked, isAuthed]);
 
   return (

@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
       await prisma.notification.create({
         data: {
           userId: booking.userId,
+          rideId: booking.rideId,
           type: "BOOKING_ACCEPTED",
           message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was accepted by ${driver.name}${
             driverPhone ? `. Driver phone: ${driverPhone}` : ""
@@ -133,6 +134,7 @@ export async function POST(req: NextRequest) {
       await prisma.notification.create({
         data: {
           userId: booking.userId,
+          rideId: booking.rideId,
           type: "BOOKING_REJECTED",
           message: `Your booking for ${booking.ride.from} → ${booking.ride.to} was rejected by ${driver.name}. Reason: ${reason}`,
         },
