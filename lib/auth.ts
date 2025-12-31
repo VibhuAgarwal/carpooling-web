@@ -11,7 +11,6 @@ type StoredUser = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __carpool_users: Map<string, StoredUser> | undefined;
 }
 
@@ -79,32 +78,60 @@ export const authOptions: AuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      if (user?.email) {
+      // On first sign-in, NextAuth provides `user`. On subsequent requests, only `token` is available.
+      // We ensure the token always carries the fields our UI and API rely on.
+      const email = (user?.email ?? token.email)?.toString().trim().toLowerCase();
+
+      if (!email) return token;
+
+      // Only hit the DB when we need to (initial sign-in or missing userId).
+      const needsDb = Boolean(user?.email) || !token.userId;
+
+      if (needsDb) {
+        const userImage =
+          user &&
+          "image" in user &&
+          typeof (user as unknown as Record<string, unknown>).image === "string"
+            ? ((user as unknown as Record<string, unknown>).image as string)
+            : undefined;
+
         let dbUser = await prisma.user.findUnique({
-          where: { email: user.email },
+          where: { email },
         });
 
         if (!dbUser) {
           dbUser = await prisma.user.create({
             data: {
-              email: user.email,
-              name: user.name || "User",
-              image: (user as any).image,
+              email,
+              name: user?.name || (token.name as string) || "User",
+              image:
+                userImage ||
+                (typeof token.picture === "string" ? token.picture : undefined),
             },
           });
         }
 
         token.userId = dbUser.id;
-        token.email = user.email;
+        token.email = dbUser.email;
+        token.name = dbUser.name ?? token.name;
+        token.picture = (dbUser.image as string | null) ?? (token.picture as string | undefined);
+      } else {
+        // Keep token.email normalized even when we skip DB.
+        token.email = email;
       }
 
       return token;
     },
 
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.userId as string;
-      }
+      if (!session.user) return session;
+
+      // Keep session.user consistent across providers.
+      if (token.userId) session.user.id = token.userId as string;
+      if (token.email) session.user.email = token.email as string;
+      if (token.name) session.user.name = token.name as string;
+      if (token.picture) session.user.image = token.picture as string;
+
       return session;
     },
 

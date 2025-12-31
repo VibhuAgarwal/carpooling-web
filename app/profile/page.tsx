@@ -229,6 +229,56 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Cars list */}
+          <div className="mt-5 mb-5">
+            {carsLoading ? (
+              <div className="space-y-3">
+                <SkeletonCardRow />
+                <SkeletonCardRow />
+                <SkeletonCardRow />
+              </div>
+            ) : cars.length === 0 ? (
+              <div className="text-sm text-gray-700">No cars added yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {cars.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 truncate">
+                        {c.make} {c.model} <span className="text-gray-500">({c.plateNumber})</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {[c.color ? `Color: ${c.color}` : null, c.seats ? `Seats: ${c.seats}` : null]
+                          .filter(Boolean)
+                          .join(" • ") || "—"}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditCar(c)}
+                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteCar(c.id)}
+                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Add/edit car form */}
           <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
             <div className="flex items-center justify-between gap-3 mb-3">
@@ -292,55 +342,7 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* Cars list */}
-          <div className="mt-5">
-            {carsLoading ? (
-              <div className="space-y-3">
-                <SkeletonCardRow />
-                <SkeletonCardRow />
-                <SkeletonCardRow />
-              </div>
-            ) : cars.length === 0 ? (
-              <div className="text-sm text-gray-700">No cars added yet.</div>
-            ) : (
-              <div className="space-y-3">
-                {cars.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-semibold text-gray-900 truncate">
-                        {c.make} {c.model} <span className="text-gray-500">({c.plateNumber})</span>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {[c.color ? `Color: ${c.color}` : null, c.seats ? `Seats: ${c.seats}` : null]
-                          .filter(Boolean)
-                          .join(" • ") || "—"}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => startEditCar(c)}
-                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteCar(c.id)}
-                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          
         </div>
 
         <div className="text-sm text-gray-600">

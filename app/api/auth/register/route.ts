@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 type StoredUser = {
@@ -10,7 +10,7 @@ type StoredUser = {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __carpool_users: Map<string, StoredUser> | undefined;
+  var __carpool_users: Map<string, StoredUser>;
 }
 
 function getUserStore() {
@@ -34,7 +34,7 @@ export function verifyPassword(password: string, salt: string, expectedHash: str
   return timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expectedHash, "hex"));
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as
       | { email?: unknown; password?: unknown }
