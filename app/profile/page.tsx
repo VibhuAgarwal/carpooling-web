@@ -14,25 +14,25 @@ type Car = {
   seats?: number | null;
 };
 
-function maskRight(value: string) {
-    const v = value.trim();
-    if (!v) return "—";
-    
-    if (v.length <= 4) return v;
-    
-    const start = v.slice(0, 2);
-    const end = v.slice(-3);
-    const masked = "•".repeat(Math.max(2, v.length - 4));
-    
-    return `${start}${masked}${end}`;
-}
+type MeUser = {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
+  const sessionUser = session?.user as any;
+
+  const [meLoading, setMeLoading] = useState(true);
+  const [me, setMe] = useState<MeUser | null>(null);
 
   const [carsLoading, setCarsLoading] = useState(true);
   const [cars, setCars] = useState<Car[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const [editingCarId, setEditingCarId] = useState<string | null>(null);
 
   const [draft, setDraft] = useState({
     make: "",
@@ -45,6 +45,23 @@ export default function ProfilePage() {
   const canSubmit = useMemo(() => {
     return draft.make.trim() && draft.model.trim() && draft.plateNumber.trim();
   }, [draft.make, draft.model, draft.plateNumber]);
+
+  const loadMe = async () => {
+    setMeLoading(true);
+    try {
+      const res = await fetch("/api/users/me", { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setMe(null);
+        return;
+      }
+      setMe(data && typeof data === "object" ? (data as MeUser) : null);
+    } catch {
+      setMe(null);
+    } finally {
+      setMeLoading(false);
+    }
+  };
 
   const loadCars = async () => {
     setCarsLoading(true);
@@ -61,43 +78,77 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
+    loadMe();
     loadCars();
   }, [status]);
 
   useEffect(() => {
-    if (status !== "authenticated") {
+    if (status === "unauthenticated") {
       window.location.href = "/login";
     }
   }, [status]);
 
-  const addCar = async () => {
+  const upsertCar = async () => {
     if (!canSubmit) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/users/me/cars", {
-        method: "POST",
+      const isEditing = Boolean(editingCarId);
+      const url = isEditing
+        ? `/api/users/me/cars?id=${encodeURIComponent(editingCarId as string)}`
+        : "/api/users/me/cars";
+
+      const payload = {
+        make: draft.make.trim(),
+        model: draft.model.trim(),
+        plateNumber: draft.plateNumber.trim(),
+        color: draft.color.trim() || null,
+        seats: draft.seats ? Number(draft.seats) : null,
+      };
+
+      let res = await fetch(url, {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          make: draft.make,
-          model: draft.model,
-          plateNumber: draft.plateNumber,
-          color: draft.color,
-          seats: draft.seats,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      // Fallback for backends that don't implement PATCH on this route
+      if (isEditing && res.status === 405) {
+        res = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast.error(data?.error || "Failed to add car");
+        toast.error(data?.error || (isEditing ? "Failed to update car" : "Failed to add car"));
         return;
       }
 
-      toast.success("Car added.", "Saved");
+      toast.success(isEditing ? "Car Details Updated." : "Car added.", "Saved");
       setDraft({ make: "", model: "", plateNumber: "", color: "", seats: "" });
+      setEditingCarId(null);
       await loadCars();
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEditCar = (c: Car) => {
+    setEditingCarId(c.id);
+    setDraft({
+      make: c.make || "",
+      model: c.model || "",
+      plateNumber: c.plateNumber || "",
+      color: c.color || "",
+      seats: c.seats != null ? String(c.seats) : "",
+    });
+  };
+
+  const cancelEditCar = () => {
+    setEditingCarId(null);
+    setDraft({ make: "", model: "", plateNumber: "", color: "", seats: "" });
   };
 
   const deleteCar = async (id: string) => {
@@ -109,6 +160,7 @@ export default function ProfilePage() {
         return;
       }
       toast.success("Car removed.", "Deleted");
+      if (editingCarId === id) cancelEditCar();
       await loadCars();
     } catch {
       toast.error("Failed to delete car");
@@ -128,10 +180,11 @@ export default function ProfilePage() {
           <p className="text-gray-600 text-lg mt-2">Manage your details and cars</p>
         </div>
 
-        {/* User details (minimal; uses session) */}
+        {/* User details */}
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">User Details</h2>
-          {status === "loading" ? (
+
+          {status === "loading" || (status === "authenticated" && meLoading) ? (
             <div className="text-sm text-gray-600">Loading…</div>
           ) : status !== "authenticated" ? (
             <div className="text-sm text-gray-700">
@@ -142,23 +195,10 @@ export default function ProfilePage() {
               .
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              {/* Use <img> to avoid next/image remote host allowlist requirements */}
-              <img
-                src={
-                  session.user?.image ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user?.name || "User")}`
-                }
-                alt={session.user?.name || "User"}
-                width={56}
-                height={56}
-                className="rounded-full object-cover border border-gray-200"
-                referrerPolicy="no-referrer"
-              />
-              <div className="min-w-0">
-                <div className="font-semibold text-gray-900 truncate">{session.user?.name}</div>
-                <div className="text-sm text-gray-600 truncate">{session.user?.email}</div>
-              </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-gray-900">{me?.name ?? sessionUser?.name ?? "—"}</div>
+              <div className="text-sm text-gray-600">{me?.email ?? sessionUser?.email ?? "—"}</div>
+              <div className="text-sm text-gray-600">{me?.phone ?? sessionUser?.phone ?? "—"}</div>
             </div>
           )}
         </div>
@@ -174,8 +214,23 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Add car form */}
+          {/* Add/edit car form */}
           <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="text-sm font-semibold text-gray-900">
+                {editingCarId ? "Edit car" : "Add a car"}
+              </div>
+              {editingCarId ? (
+                <button
+                  type="button"
+                  onClick={cancelEditCar}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input
                 value={draft.make}
@@ -214,11 +269,11 @@ export default function ProfilePage() {
 
             <button
               type="button"
-              onClick={addCar}
+              onClick={upsertCar}
               disabled={!canSubmit || saving || status !== "authenticated"}
               className="mt-3 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Saving..." : "Add Car"}
+              {saving ? "Saving..." : editingCarId ? "Save Changes" : "Add Car"}
             </button>
           </div>
 
@@ -231,22 +286,37 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-3">
                 {cars.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4">
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-4"
+                  >
                     <div className="min-w-0">
                       <div className="font-semibold text-gray-900 truncate">
                         {c.make} {c.model} <span className="text-gray-500">({c.plateNumber})</span>
                       </div>
                       <div className="text-sm text-gray-600">
-                        {[c.color ? `Color: ${c.color}` : null, c.seats ? `Seats: ${c.seats}` : null].filter(Boolean).join(" • ") || "—"}
+                        {[c.color ? `Color: ${c.color}` : null, c.seats ? `Seats: ${c.seats}` : null]
+                          .filter(Boolean)
+                          .join(" • ") || "—"}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteCar(c.id)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
-                    >
-                      Delete
-                    </button>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditCar(c)}
+                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteCar(c.id)}
+                        className="px-3 py-2 rounded-lg border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
