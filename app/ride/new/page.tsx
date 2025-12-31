@@ -266,7 +266,7 @@ export default function PostRidePage() {
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             <p className="text-sm text-blue-900">
-              Make sure your departure time is at least 1 hour from now. Riders will see your ride and can request seats immediately.
+              Make sure your departure time is at least 1 hour from now. Users will see your ride and can request seats immediately.
             </p>
           </div>
 

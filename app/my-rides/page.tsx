@@ -114,7 +114,7 @@ export default function MyRidesPage() {
             
             <div className="text-right">
               <p className="text-2xl sm:text-3xl font-bold text-blue-600">{seatsLeftSafe}</p>
-              <p className="text-xs text-gray-500">Seats Left</p>
+              <p className="text-xs text-gray-500">{seatsLeftSafe > 1 ? "Seats Left" : "Seat Left"}</p>
             </div>
           </div>
 

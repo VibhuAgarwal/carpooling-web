@@ -9,6 +9,17 @@ type Notification = {
   isRead: boolean;
 };
 
+// NEW: credential/token-based fallback for non-NextAuth email/password sign-in
+function getClientToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const keys = ["token", "accessToken", "authToken", "jwt"];
+  for (const k of keys) {
+    const v = window.localStorage.getItem(k);
+    if (v && v.trim()) return v;
+  }
+  return null;
+}
+
 export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -19,16 +30,40 @@ export default function Navbar() {
 
     const checkAuth = async () => {
       try {
-        const res = await fetch("/api/auth/session", { cache: "no-store" });
-        if (!res.ok) {
+        // 1) NextAuth-style session (OAuth etc.)
+        const res = await fetch("/api/auth/session", {
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const session = await res.json().catch(() => null);
+          const authed = Boolean(session?.user);
+          if (!cancelled) setIsAuthed(authed);
+          return;
+        }
+
+        // 2) Email/password fallback (token-based apps commonly store a token in localStorage)
+        const token = getClientToken();
+        if (!token) {
           if (!cancelled) setIsAuthed(false);
           return;
         }
-        const session = await res.json().catch(() => null);
-        const authed = Boolean(session?.user);
-        if (!cancelled) setIsAuthed(authed);
+
+        // Optional validation if your backend exposes a "me" endpoint.
+        // If you don't have this endpoint, the token presence alone will still enable the links.
+        try {
+          const me = await fetch("/api/auth/me", {
+            cache: "no-store",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!cancelled) setIsAuthed(me.ok);
+        } catch {
+          if (!cancelled) setIsAuthed(true);
+        }
       } catch {
-        if (!cancelled) setIsAuthed(false);
+        if (!cancelled) setIsAuthed(Boolean(getClientToken()));
       } finally {
         if (!cancelled) setAuthChecked(true);
       }
@@ -50,7 +85,10 @@ export default function Navbar() {
 
     const fetchNotifications = async () => {
       try {
-        const res = await fetch("/api/notifications");
+        const res = await fetch("/api/notifications", {
+          cache: "no-store",
+          credentials: "include",
+        });
         if (!res.ok) {
           if (!cancelled) setUnreadCount(0);
           return;
@@ -73,14 +111,14 @@ export default function Navbar() {
       }
     };
 
-    const onUpdated = () => fetchNotifications(); // NEW
+    const onUpdated = () => fetchNotifications();
 
     fetchNotifications();
-    window.addEventListener("notifications:updated", onUpdated); // NEW
+    window.addEventListener("notifications:updated", onUpdated);
 
     return () => {
       cancelled = true;
-      window.removeEventListener("notifications:updated", onUpdated); // NEW
+      window.removeEventListener("notifications:updated", onUpdated);
     };
   }, [authChecked, isAuthed]);
 
