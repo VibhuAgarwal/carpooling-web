@@ -136,6 +136,10 @@ export default function PostRidePage() {
     }
   };
 
+  const SkeletonLine = ({ w = "w-full" }: { w?: string }) => (
+    <div className={`h-4 ${w} bg-gray-200 rounded animate-pulse`} />
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <ToastViewport />
@@ -229,7 +233,15 @@ export default function PostRidePage() {
             </h2>
 
             {carsLoading ? (
-              <div className="text-sm text-gray-600">Loading your cars…</div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3">
+                  <SkeletonLine w="w-32" />
+                </div>
+                <div className="h-11 w-full bg-gray-200 rounded animate-pulse" />
+                <div className="mt-3">
+                  <SkeletonLine w="w-48" />
+                </div>
+              </div>
             ) : cars.length === 0 ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-900">
                 No cars found in your profile.{" "}

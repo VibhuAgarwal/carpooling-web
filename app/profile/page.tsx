@@ -167,6 +167,17 @@ export default function ProfilePage() {
     }
   };
 
+  const SkeletonLine = ({ w = "w-full" }: { w?: string }) => (
+    <div className={`h-4 ${w} bg-gray-200 rounded animate-pulse`} />
+  );
+
+  const SkeletonCardRow = () => (
+    <div className="rounded-xl border border-gray-200 p-4 animate-pulse">
+      <div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
+      <div className="h-3 w-1/2 bg-gray-100 rounded" />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <ToastViewport />
@@ -185,7 +196,11 @@ export default function ProfilePage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">User Details</h2>
 
           {status === "loading" || (status === "authenticated" && meLoading) ? (
-            <div className="text-sm text-gray-600">Loading…</div>
+            <div className="space-y-2">
+              <SkeletonLine w="w-48" />
+              <SkeletonLine w="w-64" />
+              <SkeletonLine w="w-40" />
+            </div>
           ) : status !== "authenticated" ? (
             <div className="text-sm text-gray-700">
               Please{" "}
@@ -280,7 +295,11 @@ export default function ProfilePage() {
           {/* Cars list */}
           <div className="mt-5">
             {carsLoading ? (
-              <div className="text-sm text-gray-600">Loading your cars…</div>
+              <div className="space-y-3">
+                <SkeletonCardRow />
+                <SkeletonCardRow />
+                <SkeletonCardRow />
+              </div>
             ) : cars.length === 0 ? (
               <div className="text-sm text-gray-700">No cars added yet.</div>
             ) : (

@@ -320,6 +320,24 @@ export default function MyBookingsPage() {
     return "—";
   };
 
+  const BookingSkeleton = ({ i }: { i: number }) => (
+    <div
+      key={`bsk-${i}`}
+      className="bg-white border-l-4 border-gray-200 rounded-xl shadow-sm p-4 sm:p-5 animate-pulse"
+    >
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="h-5 w-3/4 bg-gray-200 rounded mb-2" />
+          <div className="h-4 w-48 bg-gray-100 rounded" />
+        </div>
+        <div className="h-8 w-28 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="h-8 w-56 bg-gray-100 rounded-lg mb-2" />
+      <div className="h-4 w-40 bg-gray-200 rounded" />
+      <div className="mt-3 h-3 w-28 bg-gray-100 rounded" />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -337,11 +355,10 @@ export default function MyBookingsPage() {
 
         {/* Bookings List */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <p className="text-gray-600">Loading your bookings...</p>
+          <div className="space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <BookingSkeleton key={i} i={i} />
+            ))}
           </div>
         ) : bookings.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-md p-12 text-center">

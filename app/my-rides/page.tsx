@@ -167,6 +167,34 @@ export default function MyRidesPage() {
     );
   };
 
+  const RideCardSkeleton = ({ i }: { i: number }) => (
+    <div
+      key={`mrsk-${i}`}
+      className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse"
+    >
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="h-5 w-2/3 bg-gray-200 rounded mb-3" />
+            <div className="h-4 w-24 bg-gray-100 rounded mb-3" />
+            <div className="h-5 w-1/2 bg-gray-200 rounded" />
+          </div>
+          <div className="text-right">
+            <div className="h-8 w-10 bg-gray-200 rounded mb-2 ml-auto" />
+            <div className="h-3 w-16 bg-gray-100 rounded ml-auto" />
+          </div>
+        </div>
+
+        <div className="h-4 w-40 bg-gray-200 rounded mb-3" />
+        <div className="h-3 w-full bg-gray-200 rounded mb-3" />
+        <div className="flex items-center justify-between">
+          <div className="h-6 w-20 bg-gray-200 rounded-full" />
+          <div className="h-5 w-5 bg-gray-200 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-5xl mx-auto">
@@ -183,11 +211,10 @@ export default function MyRidesPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <p className="text-gray-600">Loading your rides...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <RideCardSkeleton key={i} i={i} />
+            ))}
           </div>
         ) : (
           <>

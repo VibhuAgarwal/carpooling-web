@@ -100,6 +100,20 @@ export default function NotificationsPage() {
     }
   };
 
+  const SkeletonRow = ({ i }: { i: number }) => (
+    <div
+      key={`nsk-${i}`}
+      className="w-full text-left rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden flex items-start gap-4 p-4 sm:p-5 animate-pulse"
+    >
+      <div className="w-6 h-6 rounded bg-gray-200 mt-1" />
+      <div className="flex-1 min-w-0">
+        <div className="h-4 w-3/4 bg-gray-200 rounded mb-2" />
+        <div className="h-3 w-40 bg-gray-100 rounded" />
+      </div>
+      <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1.5" />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-3xl mx-auto">
@@ -134,11 +148,10 @@ export default function NotificationsPage() {
 
         {/* Notifications List */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <p className="text-gray-600">Loading notifications...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} i={i} />
+            ))}
           </div>
         ) : notifications.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-md p-12 text-center">
