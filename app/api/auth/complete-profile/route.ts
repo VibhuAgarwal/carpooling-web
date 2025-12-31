@@ -10,10 +10,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!token?.email) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();

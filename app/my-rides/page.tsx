@@ -11,6 +11,11 @@ type Ride = {
   status: "ACTIVE" | "COMPLETED" | "CANCELLED";
   seatsLeft: number;
   seatsTotal: number;
+  car?: {
+    make?: string | null;
+    model?: string | null;
+    plateNumber?: string | null;
+  } | null;
 };
 
 export default function MyRidesPage() {
@@ -35,7 +40,6 @@ export default function MyRidesPage() {
             const seatsTotalRaw = toNumber(r?.seatsTotal, 0);
             const seatsLeftRaw = toNumber(r?.seatsLeft, 0);
 
-            // If API sends inconsistent values, make UI resilient
             const seatsTotal = Math.max(0, seatsTotalRaw);
             const seatsLeft = clamp(seatsLeftRaw, 0, seatsTotal || Math.max(0, seatsLeftRaw));
 
@@ -47,6 +51,13 @@ export default function MyRidesPage() {
               status: (r?.status ?? "ACTIVE") as Ride["status"],
               seatsLeft,
               seatsTotal: seatsTotal || (seatsLeftRaw > 0 ? seatsLeftRaw : 0),
+              car: r?.car
+                ? {
+                    make: r.car.make ?? null,
+                    model: r.car.model ?? null,
+                    plateNumber: r.car.plateNumber ?? null,
+                  }
+                : null,
             };
           });
 
@@ -150,6 +161,7 @@ export default function MyRidesPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
+
         </div>
       </Link>
     );
@@ -217,12 +229,6 @@ export default function MyRidesPage() {
                   <span className="ml-auto bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-semibold">
                     {expired.length}
                   </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-75">
-                  {expired.map((ride) => (
-                    <RideCard key={ride.id} ride={ride} />
-                  ))}
                 </div>
               </section>
             )}

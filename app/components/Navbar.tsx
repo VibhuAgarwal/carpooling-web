@@ -11,8 +11,41 @@ type Notification = {
 
 export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/session", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setIsAuthed(false);
+          return;
+        }
+        const session = await res.json().catch(() => null);
+        const authed = Boolean(session?.user);
+        if (!cancelled) setIsAuthed(authed);
+      } catch {
+        if (!cancelled) setIsAuthed(false);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
+    };
+
+    checkAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked || !isAuthed) {
+      setUnreadCount(0);
+      return;
+    }
+
     const fetchNotifications = async () => {
       try {
         const res = await fetch("/api/notifications");
@@ -33,9 +66,7 @@ export default function Navbar() {
         const data = JSON.parse(text);
 
         if (Array.isArray(data)) {
-          const unread = data.filter(
-            (n: Notification) => !n.isRead
-          ).length;
+          const unread = data.filter((n: Notification) => !n.isRead).length;
           setUnreadCount(unread);
         }
       } catch (err) {
@@ -45,7 +76,7 @@ export default function Navbar() {
     };
 
     fetchNotifications();
-  }, []);
+  }, [authChecked, isAuthed]);
 
   return (
     <header className="w-full border-b bg-white">
@@ -55,26 +86,31 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
-          <Link href="/my-bookings" className="text-sm hover:underline">
-            My Bookings
-          </Link>
+          {/* Only show these when logged in (and after auth check to avoid flicker) */}
+          {authChecked && isAuthed && (
+            <>
+              <Link href="/my-bookings" className="text-sm hover:underline">
+                My Bookings
+              </Link>
 
-          <Link href="/my-rides" className="text-sm hover:underline">
-            My Rides
-          </Link>
+              <Link href="/my-rides" className="text-sm hover:underline">
+                My Rides
+              </Link>
 
-          <Link
-            href="/notifications"
-            className="relative text-lg"
-            aria-label="Notifications"
-          >
-            🔔
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5">
-                {unreadCount}
-              </span>
-            )}
-          </Link>
+              <Link
+                href="/notifications"
+                className="relative text-lg"
+                aria-label="Notifications"
+              >
+                🔔
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
 
           <ProfileMenu />
         </div>

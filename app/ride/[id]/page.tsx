@@ -18,6 +18,11 @@ type Ride = {
     image?: string | null;
     phone?: string | null;
   };
+  car?: {
+    make?: string | null;
+    model?: string | null;
+    plateNumber?: string | null;
+  } | null;
 };
 
 export default function RideDetailsPage({
@@ -158,6 +163,16 @@ export default function RideDetailsPage({
                 </div>
               </div>
 
+              {/* NEW: Car info */}
+              <div className="rounded-xl bg-blue-50 p-4">
+                <p className="text-xs font-semibold text-blue-900/70 mb-1">Car</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {ride.car?.make || ride.car?.model || ride.car?.plateNumber
+                    ? `${[ride.car?.make, ride.car?.model].filter(Boolean).join(" ")}${ride.car?.plateNumber ? ` • ${ride.car.plateNumber}` : ""}`
+                    : "—"}
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-xl bg-blue-50 p-4">
                   <p className="text-xs font-semibold text-blue-900/70 mb-1">Departure</p>
@@ -188,18 +203,6 @@ export default function RideDetailsPage({
                   </div>
                 </div>
               </div>
-
-              {!loading && ride && (
-                <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                  <p className="text-sm text-gray-700">
-                    Driver phone{" "}
-                    <span className="text-gray-500">
-                      (shared after your booking is accepted)
-                    </span>
-                    : <b>{ride.driver.phone || "—"}</b>
-                  </p>
-                </div>
-              )}
 
               <button
                 onClick={requestBooking}

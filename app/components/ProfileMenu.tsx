@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function ProfileMenu() {
-  const { data: session, } = useSession();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,25 +21,22 @@ export default function ProfileMenu() {
 
   if (!session?.user) return null;
 
-  const dashboardPath =
-    session.user.role === "RIDER"
-      ? "/dashboard/rider"
-      : "/dashboard/user";
+  const dashboardPath = "/dashboard";
+  const profilePath = "/profile";
 
-      const getAvatarUrl = () => {
-  if (session?.user?.image) return session.user.image;
+  const getAvatarUrl = () => {
+    if (session?.user?.image) return session.user.image;
 
-  const seed =
-    session?.user?.id ||
-    session?.user?.email ||
-    session?.user?.name ||
-    "default";
+    const seed =
+      session?.user?.id ||
+      session?.user?.email ||
+      session?.user?.name ||
+      "default";
 
-  return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
-    seed
-  )}`;
-};
-
+    return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(
+      seed
+    )}`;
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -59,16 +56,20 @@ export default function ProfileMenu() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md z-50">
-          <div className="px-4 py-2 text-xs text-gray-500 border-b">
-            Role: {session.user.name}
-          </div>
-
           <Link
             href={dashboardPath}
             className="block px-4 py-2 text-sm hover:bg-gray-100"
             onClick={() => setOpen(false)}
           >
             Dashboard
+          </Link>
+
+          <Link
+            href={profilePath}
+            className="block px-4 py-2 text-sm hover:bg-gray-100"
+            onClick={() => setOpen(false)}
+          >
+            Profile
           </Link>
 
           <button

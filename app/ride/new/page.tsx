@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PlaceInput from "../../components/PlaceInput";
 import Link from "next/link";
 import { ToastViewport, toast } from "../../components/Toast";
+
+type Car = {
+  id: string;
+  make: string;
+  model: string;
+  plateNumber: string;
+  color?: string | null;
+  seats?: number | null;
+};
 
 export default function PostRidePage() {
   const router = useRouter();
@@ -13,6 +22,55 @@ export default function PostRidePage() {
 
   const [from, setFrom] = useState<any>(null);
   const [to, setTo] = useState<any>(null);
+
+  // NEW: cars + selected car
+  const [carsLoading, setCarsLoading] = useState(true);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [carId, setCarId] = useState<string>("");
+
+  const carOptions = useMemo(
+    () =>
+      cars.map((c) => ({
+        value: c.id,
+        label: `${c.make} ${c.model} (${c.plateNumber})`,
+      })),
+    [cars]
+  );
+
+  const selectedCar = useMemo(
+    () => cars.find((c) => String(c.id) === String(carId)) ?? null,
+    [cars, carId]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCarsLoading(true);
+      try {
+        const res = await fetch("/api/users/me/cars", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setCars([]);
+          return;
+        }
+        const data = await res.json();
+        const nextCars = Array.isArray(data) ? data : [];
+        if (!cancelled) {
+          setCars(nextCars);
+          // NEW: pick first car by default
+          if (!carId && nextCars.length > 0) setCarId(String(nextCars[0].id));
+        }
+      } catch {
+        if (!cancelled) setCars([]);
+      } finally {
+        if (!cancelled) setCarsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // fetch once; don't refetch on carId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,8 +80,20 @@ export default function PostRidePage() {
       return;
     }
 
-    setLoading(true);
+    if (!carId) {
+      toast.info("Please choose a car to post this ride.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
+    const seatsTotal = Number(formData.get("seats"));
+
+    if (selectedCar?.seats != null && Number.isFinite(selectedCar.seats) && seatsTotal > selectedCar.seats) {
+      toast.info(`Selected car has ${selectedCar.seats} seats. Please lower seats to continue.`);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await fetch("/api/rides", {
@@ -36,8 +106,19 @@ export default function PostRidePage() {
           to: to.name,
           toLat: to.lat,
           toLng: to.lng,
-          seatsTotal: Number(formData.get("seats")),
+          seatsTotal,
           startTime: formData.get("startTime"),
+          carId,
+          // NEW: also send car details for backend compatibility
+          car: selectedCar
+            ? {
+                make: selectedCar.make,
+                model: selectedCar.model,
+                plateNumber: selectedCar.plateNumber,
+                color: selectedCar.color ?? null,
+                seats: selectedCar.seats ?? null,
+              }
+            : null,
         }),
       });
 
@@ -138,6 +219,47 @@ export default function PostRidePage() {
             </div>
           </div>
 
+          {/* NEW: Car selection */}
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-1h10a2 2 0 012 1l2 5M5 13h14M7 17a1 1 0 100 2 1 1 0 000-2zm10 0a1 1 0 100 2 1 1 0 000-2z" />
+              </svg>
+              Car
+            </h2>
+
+            {carsLoading ? (
+              <div className="text-sm text-gray-600">Loading your cars…</div>
+            ) : cars.length === 0 ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-900">
+                No cars found in your profile.{" "}
+                <Link href="/profile" className="font-semibold text-blue-700 hover:text-blue-800">
+                  Add a car
+                </Link>{" "}
+                to post a ride.
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Choose a car</label>
+                <select
+                  value={carId}
+                  onChange={(e) => setCarId(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                >
+                  <option value="" disabled>
+                    Select a car
+                  </option>
+                  {carOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
             <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -152,7 +274,7 @@ export default function PostRidePage() {
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
-              disabled={loading || !from || !to}
+              disabled={loading || !from || !to || !carId || carsLoading}
               className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
             >
               {loading ? (

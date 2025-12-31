@@ -7,6 +7,7 @@ import PendingBookingRow from "./PendingBookingRow";
 import RouteMap from "@/app/components/RouteMap";
 import { ToastViewport } from "@/app/components/Toast";
 import SOSButton from "@/app/components/SOSButton";
+import RideDistanceEta from "@/app/components/RideDistanceEta";
 
 export default async function RideDetailsPage({
   params,
@@ -27,6 +28,13 @@ export default async function RideDetailsPage({
   const ride = await prisma.ride.findUnique({
     where: { id: rideId },
     include: {
+      car: {
+        select: {
+          make: true,
+          model: true,
+          plateNumber: true,
+        },
+      },
       bookings: {
         include: {
           user: {
@@ -133,6 +141,15 @@ export default async function RideDetailsPage({
                     minute: "2-digit",
                   })}
                 </p>
+
+                {/* NEW: distance + duration + arrival ETA */}
+                {hasCoords ? (
+                  <RideDistanceEta
+                    from={{ lat: ride.fromLat!, lng: ride.fromLng! }}
+                    to={{ lat: ride.toLat!, lng: ride.toLng! }}
+                    startTime={ride.startTime.toISOString()}
+                  />
+                ) : null}
               </div>
 
               <div className="text-right bg-white rounded-xl p-4 shadow-md">
@@ -185,6 +202,35 @@ export default async function RideDetailsPage({
                 {ride.status}
               </span>
             </div>
+
+            {/* NEW: Car info */}
+            <div className="mt-4">
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-gray-200">
+                <svg
+                  className="w-5 h-5 text-indigo-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 13l2-5a2 2 0 012-1h10a2 2 0 012 1l2 5M5 13h14M7 17a1 1 0 100 2 1 1 0 000-2zm10 0a1 1 0 100 2 1 1 0 000-2z"
+                  />
+                </svg>
+                <div className="text-sm text-gray-800">
+                  <span className="text-gray-500">Car:</span>{" "}
+                  <span className="font-semibold text-gray-900">
+                    {ride.car?.make || ride.car?.model || ride.car?.plateNumber
+                      ? `${[ride.car?.make, ride.car?.model].filter(Boolean).join(" ")}${
+                          ride.car?.plateNumber ? ` • ${ride.car.plateNumber}` : ""
+                        }`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -231,11 +277,13 @@ export default async function RideDetailsPage({
                         src={
                           b.user.image ||
                           `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            b.user.name
+                            b.user.name || "User"
                           )}`
                         }
-                        className="w-12 h-12 rounded-full object-cover border-2 border-green-200"
-                        alt={b.user.name}
+                        width={48}
+                        height={48}
+                        className="rounded-full object-cover border-2 border-green-200"
+                        alt={b.user.name || "User"}
                       />
                       <div>
                         <p className="font-semibold text-gray-900">
@@ -338,11 +386,13 @@ export default async function RideDetailsPage({
                           src={
                             b.user.image ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              b.user.name
+                              b.user.name || "User"
                             )}`
                           }
-                          className="w-12 h-12 rounded-full object-cover border-2 border-red-200"
-                          alt={b.user.name}
+                          width={48}
+                          height={48}
+                          className="rounded-full object-cover border-2 border-red-200"
+                          alt={b.user.name || "User"}
                         />
                         <div>
                           <p className="font-semibold text-gray-900">
