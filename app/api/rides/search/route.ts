@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import polyline from "@mapbox/polyline";
 
@@ -20,7 +20,7 @@ function distanceKm(
   return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const { from, to } = await req.json();
 
   if (!from || !to) {
