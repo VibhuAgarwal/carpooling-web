@@ -12,17 +12,17 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/RideSHareHub.png",
-    apple: "/public/RideShareHub.png",
+    apple: "/RideShareHub.png",
   },
   openGraph: {
     title: "CoRide",
     siteName: "CoRide",
-    images: [{ url: "/public/RideShareHub.png" }],
+    images: [{ url: "/RideShareHub.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "CoRide",
-    images: ["/public/RideShareHub.png"],
+    images: ["/RideShareHub.png"],
   },
 };
 
