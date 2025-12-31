@@ -45,6 +45,57 @@ export async function POST(req: NextRequest) {
   }
 }
 
+async function updateCar(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token?.userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const body = await req.json().catch(() => null);
+
+  const make = String(body?.make ?? "").trim();
+  const model = String(body?.model ?? "").trim();
+  const plateNumber = String(body?.plateNumber ?? "").trim().toUpperCase();
+  const color = body?.color ? String(body.color).trim() : null;
+  const seats = body?.seats == null || body?.seats === "" ? null : Number(body.seats);
+
+  if (!make || !model || !plateNumber) {
+    return NextResponse.json({ error: "Missing required fields: make, model, plateNumber" }, { status: 400 });
+  }
+  if (seats !== null && (!Number.isFinite(seats) || seats < 1 || seats > 12)) {
+    return NextResponse.json({ error: "Invalid seats" }, { status: 400 });
+  }
+
+  try {
+    const updated = await prisma.car.updateMany({
+      where: { id, userId: token.userId },
+      data: { make, model, plateNumber, color, seats },
+    });
+
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Car not found" }, { status: 404 });
+    }
+
+    const car = await prisma.car.findFirst({
+      where: { id, userId: token.userId },
+      select: { id: true, make: true, model: true, plateNumber: true, color: true, seats: true },
+    });
+
+    return NextResponse.json(car, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Could not update car (maybe duplicate plate number)." }, { status: 400 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  return updateCar(req);
+}
+
+export async function PUT(req: NextRequest) {
+  return updateCar(req);
+}
+
 export async function DELETE(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
