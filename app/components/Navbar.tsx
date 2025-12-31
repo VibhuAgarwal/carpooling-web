@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import ProfileMenu from "./ProfileMenu";
 import { useEffect, useState } from "react";
 
@@ -125,35 +126,38 @@ export default function Navbar() {
   return (
     <header className="w-full border-b bg-white">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/dashboard" className="text-lg font-semibold">
-          CarPool
-        </Link>
+        <div className="flex items-center">
+          <Image src="/RideShareHub.png" alt="CarPool Logo" width={32} height={32} className="mr-2"/>
+          <Link href="/dashboard" className="text-lg font-semibold">
+        CoRide
+          </Link>
+        </div>
 
         <div className="flex items-center gap-4">
           {/* Only show these when logged in (and after auth check to avoid flicker) */}
           {authChecked && isAuthed && (
-            <>
-              <Link href="/my-bookings" className="text-sm hover:underline">
-                My Bookings
-              </Link>
+        <>
+          <Link href="/my-bookings" className="text-sm hover:underline">
+            My Bookings
+          </Link>
 
-              <Link href="/my-rides" className="text-sm hover:underline">
-                My Rides
-              </Link>
+          <Link href="/my-rides" className="text-sm hover:underline">
+            My Rides
+          </Link>
 
-              <Link
-                href="/notifications"
-                className="relative text-lg"
-                aria-label="Notifications"
-              >
-                🔔
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-            </>
+          <Link
+            href="/notifications"
+            className="relative text-lg"
+            aria-label="Notifications"
+          >
+            🔔
+            {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1.5">
+            {unreadCount}
+          </span>
+            )}
+          </Link>
+        </>
           )}
 
           <ProfileMenu />
