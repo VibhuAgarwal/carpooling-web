@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
 import Link from "next/link";
 
 export default function CompleteProfilePage() {
@@ -27,32 +26,44 @@ export default function CompleteProfilePage() {
     drivingLicenseFile: null as File | null,
   });
 
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const didCheckRef = useRef(false);
+
   useEffect(() => {
-    const checkProfileStatus = async () => {
-      if (status === "loading") return;
+    if (status === "loading") return;
 
-      if (status === "unauthenticated") {
-        router.push("/login");
-        return;
-      }
+    if (status === "unauthenticated") {
+      router.replace("/login");
+      return;
+    }
 
+    // Avoid double-call in dev StrictMode / rerenders
+    if (didCheckRef.current) return;
+    didCheckRef.current = true;
+
+    const ac = new AbortController();
+
+    (async () => {
       try {
-        const response = await fetch("/api/auth/profile-status");
+        const response = await fetch("/api/auth/profile-status", {
+          signal: ac.signal,
+        });
         if (!response.ok) throw new Error("Failed to fetch profile status");
 
         const data = await response.json();
 
         if (data.isProfileComplete) {
-          const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-          router.push(callbackUrl);
+          router.replace(callbackUrl);
         }
       } catch (err) {
+        // Ignore aborts (navigation/unmount)
+        if ((err as any)?.name === "AbortError") return;
         console.error("Error checking profile status:", err);
       }
-    };
+    })();
 
-    checkProfileStatus();
-  }, [status, router, searchParams]);
+    return () => ac.abort();
+  }, [status, router, callbackUrl]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -98,7 +109,6 @@ export default function CompleteProfilePage() {
         throw new Error(errorData.message || "Failed to complete profile");
       }
 
-      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
       router.push(callbackUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -109,12 +119,12 @@ export default function CompleteProfilePage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-lg mb-4">
+            <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-700 font-semibold text-lg">Loading!!!!</p>
         </div>
       </div>
     );

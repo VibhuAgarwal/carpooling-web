@@ -10,7 +10,7 @@ export default function GoogleMapsProvider({
   return (
     <LoadScript
       googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}
-      libraries={["places"]}
+      libraries={["places", "routes"]}
     >
       {children}
     </LoadScript>

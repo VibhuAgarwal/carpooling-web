@@ -1,65 +1,166 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function LoginPage() {
-  const { data : session, status,  } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [role, setRole] = useState<"USER" | "RIDER">("USER");
   const [loading, setLoading] = useState(false);
+
+  const phrases = useMemo(
+    () => ["Share rides", "Split costs", "Meet verified commuters", "Arrive greener"],
+    []
+  );
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  // Simple interactive “glow” on desktop hero
+  const [pointer, setPointer] = useState({ x: 0.35, y: 0.35 });
 
   useEffect(() => {
     if (status === "authenticated") {
-  router.replace(
-    session?.user?.role === "RIDER"
-      ? "/dashboard/rider"
-      : "/dashboard/user"
-  );
-}
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
 
-  }, [status, role, router]);
+  useEffect(() => {
+    // Respect reduced motion
+    const media =
+      typeof window !== "undefined"
+        ? window.matchMedia?.("(prefers-reduced-motion: reduce)")
+        : null;
+
+    if (media?.matches) return;
+
+    const id = window.setInterval(() => {
+      setPhraseIndex((i) => (i + 1) % phrases.length);
+    }, 2500);
+
+    return () => window.clearInterval(id);
+  }, [phrases.length]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    await signIn("google",{
-      callbackUrl: `/auth/role-callback?role=${role}`,
-    });
+
+    const callbackUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/dashboard`
+        : "/dashboard";
+
+    await signIn("google", { callbackUrl });
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-gray-50">
+    <div className="h-[100dvh] overflow-hidden grid grid-cols-1 md:grid-cols-2 bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Left section */}
-      <div className="hidden md:flex flex-col justify-center px-12 bg-black text-white">
-        <h1 className="text-4xl font-bold mb-4">CarPool</h1>
-        <p className="text-lg text-gray-300">
-          Share rides. Save costs. Travel smarter.
-        </p>
-        <p className="mt-6 text-sm text-gray-400">
-          Trusted car pooling for daily and long-distance travel.
-        </p>
+      <div
+        className="relative hidden md:flex flex-col justify-center px-12 overflow-hidden bg-[#070707] text-white"
+        onMouseMove={(e) => {
+          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width;
+          const y = (e.clientY - rect.top) / rect.height;
+          setPointer({ x, y });
+        }}
+      >
+        {/* Interactive glows */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-24 opacity-70 blur-3xl transition-transform duration-150"
+          style={{
+        transform: `translate(${(pointer.x - 0.5) * 40}px, ${(pointer.y - 0.5) * 40}px)`,
+          }}
+        >
+          <div className="absolute left-10 top-10 h-72 w-72 rounded-full bg-gradient-to-tr from-blue-500/35 to-cyan-400/10" />
+          <div className="absolute right-16 bottom-12 h-80 w-80 rounded-full bg-gradient-to-tr from-fuchsia-500/25 to-amber-400/10" />
+        </div>
+
+        <div className="relative">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80">
+        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        Live carpool matching
+          </div>
+
+          <h1 className="mt-3 text-3xl font-bold tracking-tight">
+        CarPool
+        <span className="block mt-1 text-base font-medium text-white/85">
+          <span className="text-white">{phrases[phraseIndex]}</span>
+          <span className="text-white/60">. Travel smarter.</span>
+        </span>
+          </h1>
+
+          <p className="mt-4 text-xs leading-relaxed text-gray-300 max-w-md">
+        Create or join rides in minutes. Safe, cost-effective, and simple.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-1">
+        {["Verified sign-in", "Split fares", "Quick matches"].map((t) => (
+          <span
+            key={t}
+            className="rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/80 hover:bg-white/10 transition"
+          >
+            {t}
+          </span>
+        ))}
+          </div>
+
+          <div className="mt-6 grid grid-cols-3 gap-2 max-w-md">
+        {[
+          { k: "2–3x", v: "cheaper" },
+          { k: "~15m", v: "setup" },
+          { k: "Fewer", v: "cars" },
+        ].map((s) => (
+          <div key={s.k} className="rounded-lg border border-white/10 bg-white/5 p-2">
+            <div className="text-sm font-semibold">{s.k}</div>
+            <div className="text-xs text-white/70 mt-0.5">{s.v}</div>
+          </div>
+        ))}
+          </div>
+        </div>
       </div>
 
       {/* Right section */}
-      <div className="flex items-center justify-center px-6">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-            Welcome
-          </h2>
+      <div className="h-full flex items-center justify-center px-6 py-6 md:py-10">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 border border-gray-100 max-h-full overflow-auto md:overflow-visible">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-1">Welcome back</h2>
           <p className="text-sm text-gray-500 mb-6">
-            Sign in to continue
+            Sign in to continue. Your next ride might be closer than you think.
           </p>
 
           {/* Google button */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-md py-2.5 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-60"
+            aria-busy={loading}
+            className="w-full group flex items-center justify-center gap-3 border border-gray-300 rounded-md py-2.5 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
-              "Signing in..."
+              <>
+                <svg
+                  className="h-4 w-4 animate-spin text-gray-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    d="M22 12a10 10 0 0 1-10 10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Signing in…
+              </>
             ) : (
               <>
                 <Image
@@ -70,12 +171,35 @@ export default function LoginPage() {
                   height={45}
                 />
                 Continue with Google
+                <span className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
+                  →
+                </span>
               </>
             )}
           </button>
 
+          <div className="mt-6 rounded-lg bg-gray-50 border border-gray-200 p-4">
+            <div className="text-xs font-semibold text-gray-700">Why CarPool?</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[
+                { t: "Save money", d: "Split fuel & tolls" },
+                { t: "Save time", d: "Fewer solo trips" },
+                { t: "Lower emissions", d: "Share seats" },
+              ].map((x) => (
+                <div
+                  key={x.t}
+                  className="px-3 py-2 rounded-md bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm transition"
+                  title={x.d}
+                >
+                  <div className="text-xs font-medium text-gray-800">{x.t}</div>
+                  <div className="text-[11px] text-gray-500">{x.d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <p className="text-xs text-gray-400 mt-6 text-center">
-            By continuing, you agree to our Terms & Privacy Policy.
+            By continuing, you agree to our Terms &amp; Privacy Policy.
           </p>
         </div>
       </div>

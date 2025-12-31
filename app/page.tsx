@@ -18,6 +18,11 @@ type Ride = {
     name: string;
     image?: string | null;
   };
+  car?: {
+    make?: string | null;
+    model?: string | null;
+    plateNumber?: string | null;
+  } | null;
 };
 
 export default function HomePage() {
@@ -303,6 +308,21 @@ export default function HomePage() {
                           ? "Only 1 seat left!"
                           : `${ride.seatsLeft} seats available`}
                       </p>
+                    </div>
+
+                    {/* NEW: Car info */}
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <svg className="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-1h10a2 2 0 012 1l2 5M5 13h14M7 17a1 1 0 100 2 1 1 0 000-2zm10 0a1 1 0 100 2 1 1 0 000-2z" />
+                      </svg>
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-500">Car</p>
+                        <p className="font-medium text-gray-900 truncate">
+                          {ride.car?.make || ride.car?.model || ride.car?.plateNumber
+                            ? `${[ride.car?.make, ride.car?.model].filter(Boolean).join(" ")}${ride.car?.plateNumber ? ` • ${ride.car.plateNumber}` : ""}`
+                            : "—"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 

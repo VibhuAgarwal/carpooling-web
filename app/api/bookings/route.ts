@@ -54,6 +54,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (Number(seats) > ride.seatsTotal) {
+      return NextResponse.json(
+        { error: "Requested seats exceed ride capacity" },
+        { status: 400 }
+      );
+    }
+
     if (ride.driverId === user.id) {
       return NextResponse.json(
         { error: "Cannot book your own ride" },
@@ -113,6 +120,8 @@ export async function POST(req: NextRequest) {
     io?.to(`user:${ride.driverId}`).emit("booking:new", {
       bookingId: booking.id,
       rideId: ride.id,
+      userId: user.id,
+      seats: booking.seats,
       from: ride.from,
       to: ride.to,
     });
@@ -160,6 +169,7 @@ export async function GET(req: NextRequest) {
             from: true,
             to: true,
             startTime: true,
+            driver: { select: { phone: true } }, // ✅ fetch driver phone from User table
           },
         },
       },
@@ -168,7 +178,19 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(bookings);
+    // ✅ Only expose phone AFTER acceptance
+    const safe = bookings.map((b) => ({
+      ...b,
+      ride: {
+        ...b.ride,
+        driver:
+          b.status === "ACCEPTED"
+            ? { phone: b.ride.driver?.phone ?? null }
+            : { phone: null },
+      },
+    }));
+
+    return NextResponse.json(safe);
   } catch (err) {
     console.error("FETCH BOOKINGS ERROR:", err);
     return NextResponse.json([], { status: 500 });
