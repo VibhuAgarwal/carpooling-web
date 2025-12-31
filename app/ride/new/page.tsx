@@ -136,6 +136,10 @@ export default function PostRidePage() {
     }
   };
 
+  const SkeletonLine = ({ w = "w-full" }: { w?: string }) => (
+    <div className={`h-4 ${w} bg-gray-200 rounded animate-pulse`} />
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <ToastViewport />
@@ -229,7 +233,15 @@ export default function PostRidePage() {
             </h2>
 
             {carsLoading ? (
-              <div className="text-sm text-gray-600">Loading your cars…</div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3">
+                  <SkeletonLine w="w-32" />
+                </div>
+                <div className="h-11 w-full bg-gray-200 rounded animate-pulse" />
+                <div className="mt-3">
+                  <SkeletonLine w="w-48" />
+                </div>
+              </div>
             ) : cars.length === 0 ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-900">
                 No cars found in your profile.{" "}
@@ -266,7 +278,7 @@ export default function PostRidePage() {
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             <p className="text-sm text-blue-900">
-              Make sure your departure time is at least 1 hour from now. Riders will see your ride and can request seats immediately.
+              Make sure your departure time is at least 1 hour from now. Users will see your ride and can request seats immediately.
             </p>
           </div>
 

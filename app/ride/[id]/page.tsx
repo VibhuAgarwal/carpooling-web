@@ -91,6 +91,42 @@ export default function RideDetailsPage({
     }
   };
 
+  const Skeleton = () => (
+    <div className="bg-white rounded-2xl shadow-xl overflow-hidden animate-pulse">
+      <div className="bg-indigo-600 p-6">
+        <div className="h-3 w-20 bg-white/30 rounded mb-3" />
+        <div className="h-8 w-3/4 bg-white/30 rounded mb-3" />
+        <div className="h-5 w-40 bg-white/20 rounded mb-3" />
+        <div className="h-8 w-2/3 bg-white/30 rounded" />
+      </div>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
+          <div className="w-14 h-14 rounded-full bg-gray-200" />
+          <div className="flex-1">
+            <div className="h-4 w-40 bg-gray-200 rounded mb-2" />
+            <div className="h-3 w-16 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="rounded-xl bg-blue-50 p-4">
+          <div className="h-3 w-10 bg-gray-200 rounded mb-2" />
+          <div className="h-4 w-56 bg-gray-200 rounded" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-xl bg-blue-50 p-4">
+            <div className="h-3 w-20 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+          </div>
+          <div className="rounded-xl bg-blue-50 p-4">
+            <div className="h-3 w-16 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
+            <div className="h-2 w-full bg-gray-200 rounded" />
+          </div>
+        </div>
+        <div className="h-12 w-full bg-gray-200 rounded-xl" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <ToastViewport />
@@ -106,12 +142,7 @@ export default function RideDetailsPage({
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-md p-6">
-            <div className="flex items-center gap-3 text-gray-700">
-              <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-              Loading ride details...
-            </div>
-          </div>
+          <Skeleton />
         ) : !ride ? (
           <div className="bg-white rounded-2xl shadow-md p-8 text-center">
             <h1 className="text-xl font-bold text-gray-900 mb-2">Ride not found</h1>

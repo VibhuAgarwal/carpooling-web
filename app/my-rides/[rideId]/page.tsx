@@ -156,7 +156,7 @@ export default async function RideDetailsPage({
                 <p className="text-4xl font-bold text-blue-600">
                   {ride.seatsLeft}
                 </p>
-                <p className="text-sm text-gray-600">Seats Left</p>
+                <p className="text-sm text-gray-600">{ride.seatsLeft > 1 ? "Seats Left" : "Seat Left"}</p>
               </div>
             </div>
 

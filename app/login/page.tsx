@@ -10,6 +10,12 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
   const phrases = useMemo(
     () => ["Share rides", "Split costs", "Meet verified commuters", "Arrive greener"],
     []
@@ -43,6 +49,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setFormError(null);
 
     const callbackUrl =
       typeof window !== "undefined"
@@ -50,6 +57,54 @@ export default function LoginPage() {
         : "/dashboard";
 
     await signIn("google", { callbackUrl });
+  };
+
+  const handleJwtLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    setFormError(null);
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) return setFormError("Email is required.");
+    if (!password) return setFormError("Password is required.");
+    if (mode === "signup" && password !== confirmPassword) {
+      return setFormError("Passwords do not match.");
+    }
+
+    setLoading(true);
+    try {
+      // Optional: create account first (requires you to implement /api/auth/register)
+      if (mode === "signup") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmedEmail, password }),
+        });
+
+        if (!res.ok) {
+          const msg = await res.text().catch(() => "");
+          throw new Error(msg || "Sign up failed.");
+        }
+      }
+
+      // Credentials sign-in (JWT-based if NextAuth is configured with JWT strategy)
+      const result = await signIn("credentials", {
+        email: trimmedEmail,
+        password,
+        redirect: false,
+        callbackUrl: "/dashboard",
+      });
+
+      if (!result || result.error) {
+        throw new Error(result?.error || "Invalid email or password.");
+      }
+
+      router.replace("/dashboard");
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Authentication failed.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -127,6 +182,115 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mb-6">
             Sign in to continue. Your next ride might be closer than you think.
           </p>
+
+          {/* Email/Password (JWT via Credentials) */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex justify-center">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                setMode("login");
+                setFormError(null);
+                }}
+                className={[
+                "px-3 py-1 rounded-md transition",
+                mode === "login" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900",
+                ].join(" ")}
+                disabled={loading}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                setMode("signup");
+                setFormError(null);
+                }}
+                className={[
+                "px-3 py-1 rounded-md transition",
+                mode === "signup" ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900",
+                ].join(" ")}
+                disabled={loading}
+              >
+                Create account
+              </button>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleJwtLogin} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 disabled:bg-gray-50"
+                placeholder="Enter email address"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 disabled:bg-gray-50"
+                placeholder="Enter Password"
+              />
+            </div>
+
+            {mode === "signup" && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="confirmPassword">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 disabled:bg-gray-50"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+
+            {formError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {formError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading}
+              className="w-full rounded-md bg-gray-900 text-white py-2.5 text-sm font-medium hover:bg-gray-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Please wait…" : mode === "login" ? "Sign in with email" : "Create account"}
+            </button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <div className="text-[11px] text-gray-500">or</div>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
 
           {/* Google button */}
           <button

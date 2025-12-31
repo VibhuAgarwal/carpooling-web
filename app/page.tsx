@@ -30,6 +30,7 @@ export default function HomePage() {
   const [from, setFrom] = useState<any>(null);
   const [to, setTo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"recent" | "search">("recent");
   const router = useRouter();
 
@@ -40,11 +41,53 @@ export default function HomePage() {
     return limit ? filtered.slice(0, limit) : filtered;
   };
 
+  const SkeletonCard = ({ i }: { i: number }) => (
+    <div
+      key={`sk-${i}`}
+      className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse"
+    >
+      <div className="bg-indigo-600 p-4">
+        <div className="h-3 w-16 bg-white/30 rounded mb-3" />
+        <div className="h-6 w-3/4 bg-white/30 rounded mb-2" />
+        <div className="h-4 w-24 bg-white/20 rounded mb-3" />
+        <div className="h-6 w-2/3 bg-white/30 rounded" />
+      </div>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-gray-200" />
+          <div className="flex-1">
+            <div className="h-4 w-1/2 bg-gray-200 rounded mb-2" />
+            <div className="h-3 w-1/3 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="h-4 w-40 bg-gray-200 rounded" />
+        <div className="h-14 w-full bg-blue-50 rounded" />
+        <div className="h-10 w-full bg-gray-200 rounded" />
+      </div>
+    </div>
+  );
+
   // Initial load → recent rides (filtered and limited to 5)
   useEffect(() => {
+    let cancelled = false;
+    setInitialLoading(true);
+
     fetch("/api/rides")
       .then((res) => res.json())
-      .then((data) => Array.isArray(data) && setRides(processRides(data, 5)));
+      .then((data) => {
+        if (cancelled) return;
+        if (Array.isArray(data)) setRides(processRides(data, 5));
+      })
+      .catch(() => {
+        // keep existing UI; optionally toast here
+      })
+      .finally(() => {
+        if (!cancelled) setInitialLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const searchRides = async () => {
@@ -198,7 +241,13 @@ export default function HomePage() {
 
         {/* Rides Grid */}
         <div>
-          {rides.length === 0 ? (
+          {initialLoading || loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonCard key={i} i={i} />
+              ))}
+            </div>
+          ) : rides.length === 0 ? (
             <div className="text-center py-16">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
