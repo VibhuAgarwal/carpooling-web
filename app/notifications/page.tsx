@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Notification = {
   id: string;
@@ -9,9 +10,11 @@ type Notification = {
   type: string;
   isRead: boolean;
   createdAt: string;
+  rideId?: string | null; // NEW
 };
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,86 +36,65 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, []);
 
+  // NEW: map notification to a ride page
+  const getNotificationHref = (n: Notification) => {
+    if (!n.rideId) return null;
+
+    // Driver-centric notifications typically want the manage page
+    if (n.type === "BOOKING_RECEIVED") return `/my-rides/${n.rideId}`;
+
+    // Everyone else can view the ride details
+    return `/ride/${n.rideId}`;
+  };
+
+  // NEW: optimistic mark-as-read + notify navbar badge (do NOT revert on failure)
+  const markRead = async (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isRead: true }),
+      });
+    } catch (e) {
+      // keep optimistic UI; server may not support this endpoint yet
+      console.error("Failed to mark notification read (kept optimistic UI):", e);
+    } finally {
+      window.dispatchEvent(new Event("notifications:updated"));
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case "BOOKING_SENT":
         return (
-          <svg
-            className="w-6 h-6 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-            />
+          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         );
       case "BOOKING_RECEIVED":
         return (
-          <svg
-            className="w-6 h-6 text-green-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-            />
+          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         );
       case "BOOKING_ACCEPTED":
         return (
-          <svg
-            className="w-6 h-6 text-emerald-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+          <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       case "BOOKING_REJECTED":
         return (
-          <svg
-            className="w-6 h-6 text-red-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       default:
         return (
-          <svg
-            className="w-6 h-6 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
+          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
         );
     }
@@ -190,42 +172,51 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex items-start gap-4 p-4 sm:p-5 border-l-4 ${
-                  n.isRead
-                    ? "bg-white border-gray-200"
-                    : "bg-blue-50 border-blue-600"
-                }`}
-              >
-                <div className="flex-shrink-0 mt-1">{getIcon(n.type)}</div>
+            {notifications.map((n) => {
+              const href = getNotificationHref(n);
 
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-sm sm:text-base font-medium ${
-                      n.isRead
-                        ? "text-gray-700"
-                        : "text-gray-900 font-semibold"
-                    }`}
-                  >
-                    {n.message}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    {new Date(n.createdAt).toLocaleDateString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
+              const handleOpen = async () => {
+                if (!n.isRead) await markRead(n.id);
+                if (href) router.push(href);
+              };
 
-                {!n.isRead && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0 mt-1.5"></div>
-                )}
-              </div>
-            ))}
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  aria-label={href ? "Open related ride" : "Mark notification as read"}
+                  onClick={handleOpen}
+                  className={`w-full text-left rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex items-start gap-4 p-4 sm:p-5 border-l-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    n.isRead ? "bg-white border-gray-200" : "bg-blue-50 border-blue-600"
+                  }`}
+                >
+                  <div className="flex-shrink-0 mt-1">{getIcon(n.type)}</div>
+
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm sm:text-base font-medium ${
+                        n.isRead ? "text-gray-700" : "text-gray-900 font-semibold"
+                      }`}
+                    >
+                      {n.message}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      {new Date(n.createdAt).toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {href ? " • View ride" : ""}
+                    </p>
+                  </div>
+
+                  {!n.isRead && (
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0 mt-1.5" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

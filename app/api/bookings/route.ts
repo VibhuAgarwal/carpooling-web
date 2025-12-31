@@ -98,11 +98,13 @@ export async function POST(req: NextRequest) {
       data: [
         {
           userId: user.id,
+           rideId: ride.id,
           type: "BOOKING_SENT",
           message: `Booking request sent for ${ride.from} → ${ride.to} to driver`,
         },
         {
           userId: ride.driverId,
+           rideId: ride.id,
           type: "BOOKING_RECEIVED",
           message: `New booking request received for ${ride.from} → ${ride.to} from ${user.name}`,
         },

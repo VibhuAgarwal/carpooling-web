@@ -83,6 +83,9 @@ model Ride {
   carId     String?
   car       Car?    @relation("CarRides", fields: [carId], references: [id])
 
+  /// NEW: back-reference for Notification.ride
+  notifications Notification[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -118,6 +121,10 @@ model Notification {
   userId    String
   user      User              @relation(fields: [userId], references: [id])
 
+  /// NEW: optional association to the related ride
+  rideId    String?
+  ride      Ride?             @relation(fields: [rideId], references: [id], onDelete: SetNull)
+
   type      NotificationType
   message   String
   isRead    Boolean           @default(false)
@@ -126,6 +133,7 @@ model Notification {
   updatedAt DateTime          @updatedAt
 
   @@index([userId, isRead])
+  @@index([rideId])
 }
 
 model Car {
